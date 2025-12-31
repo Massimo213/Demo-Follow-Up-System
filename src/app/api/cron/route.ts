@@ -49,7 +49,7 @@ export async function GET() {
     const results = [];
     for (const job of dueJobs as ScheduledJob[]) {
       try {
-        const result = await processJob(supabase, job);
+        const result = await processJob(job);
         results.push(result);
       } catch (err) {
         console.error(`[CRON] Job ${job.id} failed:`, err);
@@ -69,9 +69,9 @@ export async function GET() {
 }
 
 async function processJob(
-  supabase: ReturnType<typeof createClient>,
   job: ScheduledJob
 ): Promise<{ job_id: string; status: string; message_id?: string }> {
+  const supabase = getSupabase();
   
   // Get the demo
   const { data: demo, error: demoError } = await supabase
@@ -81,19 +81,19 @@ async function processJob(
     .single();
 
   if (demoError || !demo) {
-    await markExecuted(supabase, job.demo_id, job.message_type);
+    await markExecuted(job.demo_id, job.message_type);
     return { job_id: job.id, status: 'skipped_no_demo' };
   }
 
   // Check if demo is in terminal state
   if (['CANCELLED', 'RESCHEDULED', 'COMPLETED', 'NO_SHOW'].includes(demo.status)) {
-    await markExecuted(supabase, job.demo_id, job.message_type);
+    await markExecuted(job.demo_id, job.message_type);
     return { job_id: job.id, status: 'skipped_terminal_state' };
   }
 
   // For JOIN_LINK on FUTURE demos, require confirmation
   if (job.message_type === 'JOIN_LINK' && demo.demo_type === 'FUTURE' && demo.status !== 'CONFIRMED') {
-    await markExecuted(supabase, job.demo_id, job.message_type);
+    await markExecuted(job.demo_id, job.message_type);
     return { job_id: job.id, status: 'skipped_not_confirmed' };
   }
 
@@ -106,7 +106,7 @@ async function processJob(
     .limit(1);
 
   if (existingMsg && existingMsg.length > 0) {
-    await markExecuted(supabase, job.demo_id, job.message_type);
+    await markExecuted(job.demo_id, job.message_type);
     return { job_id: job.id, status: 'already_sent' };
   }
 
@@ -114,7 +114,7 @@ async function processJob(
   const message = await MessagingService.sendMessage(demo as Demo, job.message_type as MessageType);
   
   // Mark as executed
-  await markExecuted(supabase, job.demo_id, job.message_type);
+  await markExecuted(job.demo_id, job.message_type);
 
   console.log(`[CRON] Sent ${job.message_type} to ${demo.email}`);
   
@@ -125,11 +125,8 @@ async function processJob(
   };
 }
 
-async function markExecuted(
-  supabase: ReturnType<typeof createClient>,
-  demoId: string,
-  messageType: string
-) {
+async function markExecuted(demoId: string, messageType: string) {
+  const supabase = getSupabase();
   await supabase
     .from('scheduled_jobs')
     .update({ executed: true, executed_at: new Date().toISOString() })
