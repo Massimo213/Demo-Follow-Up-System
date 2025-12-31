@@ -61,10 +61,10 @@ export async function GET() {
 
     const supabase = getSupabase();
 
-    // Get scheduled events from last 24 hours to next 7 days
+    // Get scheduled events from last 24 hours to next 14 days
     const minTime = new Date();
     minTime.setHours(minTime.getHours() - 24);
-    const maxTime = addHours(new Date(), 24 * 7);
+    const maxTime = addHours(new Date(), 24 * 14);
 
     // Fetch scheduled events
     const eventsRes = await fetch(
