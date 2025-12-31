@@ -2,16 +2,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "installCommand": "npm install",
-  "crons": [
-    {
-      "path": "/api/sync/calendly",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron",
-      "schedule": "* * * * *"
-    }
-  ]
+  "installCommand": "npm install"
 }
 
