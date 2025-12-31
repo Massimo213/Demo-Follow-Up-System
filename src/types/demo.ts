@@ -49,6 +49,8 @@ export interface ScheduledJob {
   executed: boolean;
   executed_at: string | null;
   cancelled: boolean;
+  processing: boolean;
+  processing_started_at: string | null;
   created_at: string;
 }
 
