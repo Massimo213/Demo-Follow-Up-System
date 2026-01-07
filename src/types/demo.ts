@@ -17,6 +17,7 @@ export type MessageChannel = 'EMAIL';
 export type MessageType =
   | 'CONFIRM_INITIAL'
   | 'CONFIRM_REMINDER'
+  | 'DAY_OF_REMINDER'
   | 'JOIN_LINK'
   | 'JOIN_URGENT'
   | 'SOONER_OFFER'

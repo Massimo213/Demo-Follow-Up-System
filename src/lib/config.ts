@@ -59,10 +59,13 @@ export const TIMING = {
   NEXT_DAY: {
     T_MINUS_4H: 4 * 60 * 60 * 1000,
     T_MINUS_10M: 10 * 60 * 1000,
+    T_PLUS_2M: 2 * 60 * 1000,
   },
   FUTURE: {
     T_PLUS_24H: 24 * 60 * 60 * 1000,
     T_MINUS_48H: 48 * 60 * 60 * 1000,
+    T_MINUS_4H: 4 * 60 * 60 * 1000,  // Day-of reminder (morning of demo)
     T_MINUS_10M: 10 * 60 * 1000,
+    T_PLUS_2M: 2 * 60 * 1000,
   },
 } as const;

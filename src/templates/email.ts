@@ -49,6 +49,7 @@ export class EmailTemplates {
     const templates: Record<MessageType, () => EmailTemplate> = {
       CONFIRM_INITIAL: () => this.confirmInitial(demo),
       CONFIRM_REMINDER: () => this.confirmReminder(demo),
+      DAY_OF_REMINDER: () => this.dayOfReminder(demo),
       JOIN_LINK: () => this.joinLink(demo),
       JOIN_URGENT: () => this.joinUrgent(demo),
       SOONER_OFFER: () => this.soonerOffer(demo),
@@ -116,6 +117,38 @@ Quick check - still good for ${time} today?
 Reply YES to confirm.
 
 If you need to reschedule, just reply RESCHEDULE.`,
+    };
+  }
+
+  /**
+   * Day-of reminder (4 hours before) - "Your demo is TODAY"
+   */
+  static dayOfReminder(demo: Demo): EmailTemplate {
+    const time = formatShortTime(demo);
+    const firstName = demo.name.split(' ')[0];
+
+    return {
+      subject: `${firstName} - Your demo is TODAY at ${time}`,
+      html: wrapHtml(`
+<p>Hey ${firstName},</p>
+
+<p>Quick reminder - we're meeting <strong>today at ${time}</strong>.</p>
+
+<p>I'll send you the join link closer to the time.</p>
+
+<p><strong>Reply YES</strong> to confirm you'll be there, or <strong>RESCHEDULE</strong> if something came up.</p>
+
+<p>Looking forward to it.</p>
+      `),
+      text: `Hey ${firstName},
+
+Quick reminder - we're meeting today at ${time}.
+
+I'll send you the join link closer to the time.
+
+Reply YES to confirm you'll be there, or RESCHEDULE if something came up.
+
+Looking forward to it.`,
     };
   }
 

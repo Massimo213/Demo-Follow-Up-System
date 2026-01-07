@@ -32,8 +32,9 @@ const SEQUENCES: Record<DemoType, SequenceStep[]> = {
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'CONFIRM_REMINDER', offset: TIMING.FUTURE.T_PLUS_24H },
     { messageType: 'SOONER_OFFER', offset: -TIMING.FUTURE.T_MINUS_48H },
+    { messageType: 'DAY_OF_REMINDER', offset: -TIMING.FUTURE.T_MINUS_4H },
     { messageType: 'JOIN_LINK', offset: -TIMING.FUTURE.T_MINUS_10M },
-    { messageType: 'JOIN_URGENT', offset: TIMING.SAME_DAY.T_PLUS_2M },
+    { messageType: 'JOIN_URGENT', offset: TIMING.FUTURE.T_PLUS_2M },
   ],
 };
 
