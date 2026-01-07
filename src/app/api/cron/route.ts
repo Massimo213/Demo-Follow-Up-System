@@ -25,6 +25,7 @@ function getSupabase() {
   );
 }
 
+// Support both GET (browser/curl) and POST (cron services like Vercel/QStash)
 export async function GET() {
   const runId = crypto.randomUUID().slice(0, 8);
   
@@ -188,4 +189,9 @@ async function markCompleted(supabase: ReturnType<typeof getSupabase>, jobId: st
       processing_started_at: null
     })
     .eq('id', jobId);
+}
+
+// POST alias for cron services (QStash, Vercel Cron, etc.)
+export async function POST() {
+  return GET();
 }

@@ -49,6 +49,7 @@ interface CalendlyInvitee {
   timezone: string;
 }
 
+// Support both GET (browser/curl) and POST (cron services like Vercel/QStash)
 export async function GET() {
   const syncId = crypto.randomUUID().slice(0, 8);
   
@@ -240,4 +241,9 @@ export async function GET() {
     console.error(`[SYNC:${syncId}] Error:`, error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
+}
+
+// POST alias for cron services (QStash, Vercel Cron, etc.)
+export async function POST() {
+  return GET();
 }
