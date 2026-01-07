@@ -126,19 +126,13 @@ async function processJobWithLock(
       return { job_id: job.id, status: 'skipped_no_demo' };
     }
 
-    // Step 3: Check if demo is in terminal state
-    if (['CANCELLED', 'RESCHEDULED', 'COMPLETED', 'NO_SHOW'].includes(demo.status)) {
+    // Step 3: Check if demo is in terminal state (only skip if actually cancelled/rescheduled)
+    if (['CANCELLED', 'RESCHEDULED'].includes(demo.status)) {
       await markCompleted(supabase, job.id);
       return { job_id: job.id, status: 'skipped_terminal_state' };
     }
 
-    // Step 4: For JOIN_LINK on FUTURE demos, require confirmation
-    if (job.message_type === 'JOIN_LINK' && demo.demo_type === 'FUTURE' && demo.status !== 'CONFIRMED') {
-      await markCompleted(supabase, job.id);
-      return { job_id: job.id, status: 'skipped_not_confirmed' };
-    }
-
-    // Step 5: Check if message already sent (defense in depth)
+    // Step 4: Check if message already sent (defense in depth)
     const { data: existingMsg } = await supabase
       .from('messages')
       .select('id')

@@ -31,7 +31,7 @@ const SEQUENCES: Record<DemoType, SequenceStep[]> = {
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'CONFIRM_REMINDER', offset: TIMING.FUTURE.T_PLUS_24H },
     { messageType: 'SOONER_OFFER', offset: -TIMING.FUTURE.T_MINUS_48H },
-    { messageType: 'JOIN_LINK', offset: -TIMING.FUTURE.T_MINUS_10M, requiresConfirmation: true },
+    { messageType: 'JOIN_LINK', offset: -TIMING.FUTURE.T_MINUS_10M },
   ],
 };
 
@@ -120,11 +120,8 @@ export class SchedulerService {
     const demo = await db.demos.findById(demoId);
     if (!demo) return false;
 
-    if (['CANCELLED', 'RESCHEDULED', 'COMPLETED', 'NO_SHOW'].includes(demo.status)) {
-      return false;
-    }
-
-    if (messageType === 'JOIN_LINK' && demo.demo_type === 'FUTURE' && demo.status !== 'CONFIRMED') {
+    // Only skip if explicitly cancelled or rescheduled
+    if (['CANCELLED', 'RESCHEDULED'].includes(demo.status)) {
       return false;
     }
 
