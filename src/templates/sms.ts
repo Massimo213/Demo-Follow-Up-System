@@ -29,13 +29,13 @@ export class SmsTemplates {
 
     const templates: Partial<Record<MessageType, () => SmsTemplate>> = {
       SMS_REMINDER: () => ({
-        body: `Hey ${firstName}, quick reminder: our demo with Elystra is today at ${time}. Talk soon!`,
+        body: `${firstName}, quick reminder: Elystra demo at ${time}.\nGoal: compress 'send it over → paid' into same-day.\nYou still good for ${time}?`,
       }),
       SMS_JOIN_LINK: () => ({
-        body: `${firstName} - Ready when you are! Join here: ${demo.join_url}`,
+        body: `${firstName}, I'm ready on the Elystra demo.\nJoin here: ${demo.join_url}`,
       }),
       SMS_URGENT: () => ({
-        body: `${firstName} - I'm on the call. Join now: ${demo.join_url}`,
+        body: `${firstName}, I'm on the call now.\nIf you're running behind, text me a better time.\nOtherwise, hop in here: ${demo.join_url}`,
       }),
     };
 
