@@ -46,7 +46,7 @@ ${content}
 
 export class EmailTemplates {
   static getTemplate(messageType: MessageType, demo: Demo): EmailTemplate | null {
-    const templates: Record<MessageType, () => EmailTemplate> = {
+    const templates: Partial<Record<MessageType, () => EmailTemplate>> = {
       CONFIRM_INITIAL: () => this.confirmInitial(demo),
       CONFIRM_REMINDER: () => this.confirmReminder(demo),
       DAY_OF_REMINDER: () => this.dayOfReminder(demo),
@@ -54,6 +54,7 @@ export class EmailTemplates {
       JOIN_URGENT: () => this.joinUrgent(demo),
       SOONER_OFFER: () => this.soonerOffer(demo),
       RECEIPT: () => this.receipt(demo),
+      // SMS types don't need email templates
     };
 
     const templateFn = templates[messageType];
