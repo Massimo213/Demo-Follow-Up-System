@@ -26,17 +26,16 @@ export class SmsTemplates {
   static getTemplate(messageType: MessageType, demo: Demo): SmsTemplate | null {
     const firstName = demo.name.split(' ')[0];
     const time = formatShortTime(demo);
-    const date = formatShortDate(demo);
 
     const templates: Partial<Record<MessageType, () => SmsTemplate>> = {
       SMS_REMINDER: () => ({
-        body: `Hey ${firstName}! Quick reminder: our demo is TODAY at ${time}. I'll send the join link shortly. Reply STOP to cancel.`,
+        body: `Hey ${firstName}, quick reminder: our demo with Elystra is today at ${time}. Talk soon!`,
       }),
       SMS_JOIN_LINK: () => ({
-        body: `${firstName} - Ready for our call! Join here: ${demo.join_url}`,
+        body: `${firstName} - Ready when you are! Join here: ${demo.join_url}`,
       }),
       SMS_URGENT: () => ({
-        body: `${firstName} I'm on the call waiting for you. Join now: ${demo.join_url}`,
+        body: `${firstName} - I'm on the call. Join now: ${demo.join_url}`,
       }),
     };
 
