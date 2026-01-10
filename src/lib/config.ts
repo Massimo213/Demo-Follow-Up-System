@@ -35,6 +35,14 @@ export const config = {
     };
   },
 
+  get twilio() {
+    return {
+      accountSid: getEnv('TWILIO_ACCOUNT_SID'),
+      authToken: getEnv('TWILIO_AUTH_TOKEN'),
+      phoneNumber: getEnv('TWILIO_PHONE_NUMBER'),
+    };
+  },
+
   get calendly() {
     return {
       webhookSecret: getEnv('CALENDLY_WEBHOOK_SECRET'),
@@ -67,5 +75,10 @@ export const TIMING = {
     T_MINUS_4H: 4 * 60 * 60 * 1000,  // Day-of reminder (morning of demo)
     T_MINUS_10M: 10 * 60 * 1000,
     T_PLUS_2M: 2 * 60 * 1000,
+  },
+  SMS: {
+    T_MINUS_2H: 2 * 60 * 60 * 1000,   // SMS reminder 2 hours before
+    T_MINUS_5M: 5 * 60 * 1000,        // SMS join link 5 min before
+    T_PLUS_5M: 5 * 60 * 1000,         // SMS urgent 5 min after
   },
 } as const;

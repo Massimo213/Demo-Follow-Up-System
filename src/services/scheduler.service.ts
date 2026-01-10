@@ -18,23 +18,32 @@ const SEQUENCES: Record<DemoType, SequenceStep[]> = {
   SAME_DAY: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'CONFIRM_REMINDER', offset: -TIMING.SAME_DAY.T_MINUS_60M },
+    { messageType: 'SMS_REMINDER', offset: -TIMING.SMS.T_MINUS_2H },
     { messageType: 'JOIN_LINK', offset: -TIMING.SAME_DAY.T_MINUS_10M },
+    { messageType: 'SMS_JOIN_LINK', offset: -TIMING.SMS.T_MINUS_5M },
     { messageType: 'JOIN_URGENT', offset: TIMING.SAME_DAY.T_PLUS_2M },
+    { messageType: 'SMS_URGENT', offset: TIMING.SMS.T_PLUS_5M },
   ],
   NEXT_DAY: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'RECEIPT', offset: 1000 },
     { messageType: 'CONFIRM_REMINDER', offset: -TIMING.NEXT_DAY.T_MINUS_4H },
+    { messageType: 'SMS_REMINDER', offset: -TIMING.SMS.T_MINUS_2H },
     { messageType: 'JOIN_LINK', offset: -TIMING.NEXT_DAY.T_MINUS_10M },
+    { messageType: 'SMS_JOIN_LINK', offset: -TIMING.SMS.T_MINUS_5M },
     { messageType: 'JOIN_URGENT', offset: TIMING.SAME_DAY.T_PLUS_2M },
+    { messageType: 'SMS_URGENT', offset: TIMING.SMS.T_PLUS_5M },
   ],
   FUTURE: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'CONFIRM_REMINDER', offset: TIMING.FUTURE.T_PLUS_24H },
     { messageType: 'SOONER_OFFER', offset: -TIMING.FUTURE.T_MINUS_48H },
     { messageType: 'DAY_OF_REMINDER', offset: -TIMING.FUTURE.T_MINUS_4H },
+    { messageType: 'SMS_REMINDER', offset: -TIMING.SMS.T_MINUS_2H },
     { messageType: 'JOIN_LINK', offset: -TIMING.FUTURE.T_MINUS_10M },
+    { messageType: 'SMS_JOIN_LINK', offset: -TIMING.SMS.T_MINUS_5M },
     { messageType: 'JOIN_URGENT', offset: TIMING.FUTURE.T_PLUS_2M },
+    { messageType: 'SMS_URGENT', offset: TIMING.SMS.T_PLUS_5M },
   ],
 };
 

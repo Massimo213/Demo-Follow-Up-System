@@ -12,7 +12,7 @@ export type DemoStatus =
   | 'NO_SHOW'
   | 'COMPLETED';
 
-export type MessageChannel = 'EMAIL';
+export type MessageChannel = 'EMAIL' | 'SMS';
 
 export type MessageType =
   | 'CONFIRM_INITIAL'
@@ -21,7 +21,10 @@ export type MessageType =
   | 'JOIN_LINK'
   | 'JOIN_URGENT'
   | 'SOONER_OFFER'
-  | 'RECEIPT';
+  | 'RECEIPT'
+  | 'SMS_REMINDER'
+  | 'SMS_JOIN_LINK'
+  | 'SMS_URGENT';
 
 export interface Demo {
   id: string;

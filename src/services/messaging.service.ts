@@ -1,6 +1,6 @@
 /**
  * Messaging Service
- * Handles email delivery via Resend
+ * Handles email delivery via Resend and SMS via Twilio
  * 
  * IDEMPOTENCY:
  * - Uses Resend's Idempotency-Key header to prevent duplicate sends
@@ -9,11 +9,14 @@
  */
 
 import { Resend } from 'resend';
+import Twilio from 'twilio';
 import { db } from '@/lib/db';
 import type { Demo, MessageType, Message } from '@/types/demo';
 import { EmailTemplates } from '@/templates/email';
+import { SmsTemplates } from '@/templates/sms';
 
 let _resend: Resend | null = null;
+let _twilio: Twilio.Twilio | null = null;
 
 function getResend(): Resend {
   if (_resend) return _resend;
@@ -23,18 +26,33 @@ function getResend(): Resend {
   return _resend;
 }
 
+function getTwilio(): Twilio.Twilio {
+  if (_twilio) return _twilio;
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!accountSid || !authToken) throw new Error('TWILIO credentials not configured');
+  _twilio = Twilio(accountSid, authToken);
+  return _twilio;
+}
+
+// SMS message types
+const SMS_TYPES: MessageType[] = ['SMS_REMINDER', 'SMS_JOIN_LINK', 'SMS_URGENT'];
+
 export class MessagingService {
   /**
-   * Send message (email only)
+   * Send message (routes to email or SMS based on type)
    * @param demo - The demo record
    * @param messageType - Type of message to send
-   * @param idempotencyKey - Optional key to prevent duplicate sends (recommended: demo_id-message_type)
+   * @param idempotencyKey - Optional key to prevent duplicate sends
    */
   static async sendMessage(
     demo: Demo, 
     messageType: MessageType,
     idempotencyKey?: string
   ): Promise<Message | null> {
+    if (SMS_TYPES.includes(messageType)) {
+      return this.sendSms(demo, messageType);
+    }
     return this.sendEmail(demo, messageType, idempotencyKey);
   }
 
@@ -112,6 +130,71 @@ export class MessagingService {
         return null;
       }
       console.error(`Failed to send email ${messageType}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send SMS via Twilio
+   */
+  static async sendSms(
+    demo: Demo,
+    messageType: MessageType
+  ): Promise<Message | null> {
+    // Skip if no phone number
+    if (!demo.phone) {
+      console.log(`[MESSAGING] No phone for ${demo.email}, skipping SMS`);
+      return null;
+    }
+
+    // Check if already sent
+    const alreadySent = await this.wasMessageSent(demo.id, messageType);
+    if (alreadySent) {
+      console.log(`[MESSAGING] ${messageType} already sent to ${demo.phone}, skipping`);
+      return null;
+    }
+
+    const template = SmsTemplates.getTemplate(messageType, demo);
+    if (!template) {
+      console.error(`No SMS template for ${messageType}`);
+      return null;
+    }
+
+    const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+    if (!twilioNumber) throw new Error('TWILIO_PHONE_NUMBER not configured');
+
+    const twilio = getTwilio();
+
+    try {
+      const response = await twilio.messages.create({
+        body: template.body,
+        from: twilioNumber,
+        to: demo.phone,
+      });
+
+      // Record message
+      try {
+        const message = await db.messages.insert({
+          demo_id: demo.id,
+          channel: 'SMS',
+          message_type: messageType,
+          recipient: demo.phone,
+          subject: null,
+          body: template.body,
+          external_id: response.sid,
+        });
+        
+        console.log(`[MESSAGING] SMS ${messageType} sent to ${demo.phone}`);
+        return message;
+      } catch (dbError: any) {
+        if (dbError?.code === '23505') {
+          console.log(`[MESSAGING] SMS ${messageType} already recorded for ${demo.id}`);
+          return null;
+        }
+        throw dbError;
+      }
+    } catch (error) {
+      console.error(`Failed to send SMS ${messageType}:`, error);
       throw error;
     }
   }
