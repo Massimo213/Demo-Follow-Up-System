@@ -47,6 +47,11 @@ interface CalendlyInvitee {
   name: string;
   status: string;
   timezone: string;
+  text_reminder_number?: string;
+  questions_and_answers?: Array<{
+    question: string;
+    answer: string;
+  }>;
 }
 
 // Support both GET (browser/curl) and POST (cron services like Vercel/QStash)
@@ -135,6 +140,23 @@ export async function GET() {
       const demoTime = parseISO(event.start_time);
       const demoType = DemoService.classifyDemoType(demoTime);
 
+      // Extract phone from text_reminder_number or questions
+      let phone: string | null = invitee.text_reminder_number || null;
+      if (!phone && invitee.questions_and_answers) {
+        const phoneAnswer = invitee.questions_and_answers.find(
+          (qa) => qa.question.toLowerCase().includes('phone') || 
+                  qa.question.toLowerCase().includes('cell') ||
+                  qa.question.toLowerCase().includes('mobile')
+        );
+        if (phoneAnswer) {
+          // Clean phone number - remove non-digits except +
+          phone = phoneAnswer.answer.replace(/[^\d+]/g, '');
+          if (phone && !phone.startsWith('+')) {
+            phone = '+1' + phone; // Assume North American
+          }
+        }
+      }
+
       // ATOMIC INSERT - uses ON CONFLICT to handle race conditions
       const { data: newDemo, error: insertError } = await supabase
         .from('demos')
@@ -143,7 +165,7 @@ export async function GET() {
           calendly_invitee_id: invitee.uri.split('/').pop() || '',
           email: invitee.email,
           name: invitee.name,
-          phone: null,
+          phone,
           scheduled_at: event.start_time,
           demo_type: demoType,
           status: 'PENDING',
