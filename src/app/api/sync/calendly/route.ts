@@ -146,16 +146,25 @@ export async function GET() {
         const phoneAnswer = invitee.questions_and_answers.find(
           (qa) => qa.question.toLowerCase().includes('phone') || 
                   qa.question.toLowerCase().includes('cell') ||
-                  qa.question.toLowerCase().includes('mobile')
+                  qa.question.toLowerCase().includes('mobile') ||
+                  qa.question.toLowerCase().includes('number') ||
+                  qa.question.toLowerCase().includes('sms') ||
+                  qa.question.toLowerCase().includes('text') ||
+                  qa.question.toLowerCase().includes('contact')
         );
-        if (phoneAnswer) {
+        if (phoneAnswer && phoneAnswer.answer) {
           // Clean phone number - remove non-digits except +
           phone = phoneAnswer.answer.replace(/[^\d+]/g, '');
-          if (phone && !phone.startsWith('+')) {
+          if (phone && phone.length >= 10 && !phone.startsWith('+')) {
             phone = '+1' + phone; // Assume North American
+          }
+          if (phone && phone.length < 10) {
+            phone = null; // Invalid phone
           }
         }
       }
+      
+      console.log(`[SYNC:${syncId}] Invitee ${invitee.email} - phone: ${phone}, questions:`, JSON.stringify(invitee.questions_and_answers));
 
       // ATOMIC INSERT - uses ON CONFLICT to handle race conditions
       const { data: newDemo, error: insertError } = await supabase
