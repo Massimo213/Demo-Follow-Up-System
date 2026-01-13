@@ -36,7 +36,7 @@ function getTwilio(): Twilio.Twilio {
 }
 
 // SMS message types
-const SMS_TYPES: MessageType[] = ['SMS_REMINDER', 'SMS_JOIN_LINK', 'SMS_URGENT'];
+const SMS_TYPES: MessageType[] = ['SMS_CONFIRM', 'SMS_REMINDER', 'SMS_JOIN_LINK', 'SMS_URGENT'];
 
 export class MessagingService {
   /**

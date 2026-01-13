@@ -22,6 +22,7 @@ export type MessageType =
   | 'JOIN_URGENT'
   | 'SOONER_OFFER'
   | 'RECEIPT'
+  | 'SMS_CONFIRM'
   | 'SMS_REMINDER'
   | 'SMS_JOIN_LINK'
   | 'SMS_URGENT';

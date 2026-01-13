@@ -26,8 +26,12 @@ export class SmsTemplates {
   static getTemplate(messageType: MessageType, demo: Demo): SmsTemplate | null {
     const firstName = demo.name.split(' ')[0];
     const time = formatShortTime(demo);
+    const date = formatShortDate(demo);
 
     const templates: Partial<Record<MessageType, () => SmsTemplate>> = {
+      SMS_CONFIRM: () => ({
+        body: `${firstName}, you're booked with Elystra!\n${date} at ${time}.\nI'll send you a reminder before we connect.`,
+      }),
       SMS_REMINDER: () => ({
         body: `${firstName}, quick reminder: Elystra demo at ${time}.\nGoal: compress 'send it over → paid' into same-day.\nYou still good for ${time}?`,
       }),

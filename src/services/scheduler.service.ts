@@ -17,6 +17,7 @@ type SequenceStep = {
 const SEQUENCES: Record<DemoType, SequenceStep[]> = {
   SAME_DAY: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
+    { messageType: 'SMS_CONFIRM', offset: 2000 },
     { messageType: 'CONFIRM_REMINDER', offset: -TIMING.SAME_DAY.T_MINUS_60M },
     { messageType: 'SMS_REMINDER', offset: -TIMING.SMS.T_MINUS_2H },
     { messageType: 'JOIN_LINK', offset: -TIMING.SAME_DAY.T_MINUS_10M },
@@ -26,7 +27,8 @@ const SEQUENCES: Record<DemoType, SequenceStep[]> = {
   ],
   NEXT_DAY: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
-    { messageType: 'RECEIPT', offset: 1000 },
+    { messageType: 'SMS_CONFIRM', offset: 2000 },
+    { messageType: 'RECEIPT', offset: 3000 },
     { messageType: 'CONFIRM_REMINDER', offset: -TIMING.NEXT_DAY.T_MINUS_4H },
     { messageType: 'SMS_REMINDER', offset: -TIMING.SMS.T_MINUS_2H },
     { messageType: 'JOIN_LINK', offset: -TIMING.NEXT_DAY.T_MINUS_10M },
@@ -36,6 +38,7 @@ const SEQUENCES: Record<DemoType, SequenceStep[]> = {
   ],
   FUTURE: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
+    { messageType: 'SMS_CONFIRM', offset: 2000 },
     { messageType: 'CONFIRM_REMINDER', offset: TIMING.FUTURE.T_PLUS_24H },
     { messageType: 'SOONER_OFFER', offset: -TIMING.FUTURE.T_MINUS_48H },
     { messageType: 'DAY_OF_REMINDER', offset: -TIMING.FUTURE.T_MINUS_4H },
