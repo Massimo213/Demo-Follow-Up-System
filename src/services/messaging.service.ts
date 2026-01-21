@@ -1,29 +1,44 @@
 /**
  * Messaging Service
- * Handles email delivery via Resend and SMS via Twilio
+ * Handles email delivery via Gmail SMTP and SMS via Twilio
  * 
  * IDEMPOTENCY:
- * - Uses Resend's Idempotency-Key header to prevent duplicate sends
  * - DB has UNIQUE(demo_id, message_type) constraint on messages table
  * - Checks for existing message before attempting send
+ * 
+ * GMAIL SETUP:
+ * 1. Enable 2FA on your Google Account
+ * 2. Go to: Google Account → Security → 2-Step Verification → App passwords
+ * 3. Create an app password for "Mail"
+ * 4. Set GMAIL_USER and GMAIL_APP_PASSWORD env vars
  */
 
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import Twilio from 'twilio';
 import { db } from '@/lib/db';
 import type { Demo, MessageType, Message } from '@/types/demo';
 import { EmailTemplates } from '@/templates/email';
 import { SmsTemplates } from '@/templates/sms';
 
-let _resend: Resend | null = null;
+let _transporter: nodemailer.Transporter | null = null;
 let _twilio: Twilio.Twilio | null = null;
 
-function getResend(): Resend {
-  if (_resend) return _resend;
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new Error('RESEND_API_KEY not configured');
-  _resend = new Resend(apiKey);
-  return _resend;
+function getGmailTransporter(): nodemailer.Transporter {
+  if (_transporter) return _transporter;
+  
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  
+  if (!user || !pass) {
+    throw new Error('GMAIL_USER or GMAIL_APP_PASSWORD not configured');
+  }
+  
+  _transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass },
+  });
+  
+  return _transporter;
 }
 
 function getTwilio(): Twilio.Twilio {
@@ -57,14 +72,14 @@ export class MessagingService {
   }
 
   /**
-   * Send email with idempotency protection
+   * Send email via Gmail SMTP with idempotency protection
    */
   static async sendEmail(
     demo: Demo, 
     messageType: MessageType,
     idempotencyKey?: string
   ): Promise<Message | null> {
-    // Defense in depth: Check if already sent before calling Resend
+    // Defense in depth: Check if already sent
     const alreadySent = await this.wasMessageSent(demo.id, messageType);
     if (alreadySent) {
       console.log(`[MESSAGING] ${messageType} already sent to ${demo.email}, skipping`);
@@ -77,31 +92,26 @@ export class MessagingService {
       return null;
     }
 
-    const from = process.env.EMAIL_FROM;
-    if (!from) throw new Error('EMAIL_FROM not configured');
+    const gmailUser = process.env.GMAIL_USER;
+    if (!gmailUser) throw new Error('GMAIL_USER not configured');
 
-    const resend = getResend();
+    // Display name for "From" field
+    const fromName = process.env.GMAIL_FROM_NAME || 'Yahya from Elystra';
+    const from = `"${fromName}" <${gmailUser}>`;
 
-    // Generate idempotency key if not provided
-    const key = idempotencyKey || `${demo.id}-${messageType}-${Date.now()}`;
+    const transporter = getGmailTransporter();
 
     try {
-      const response = await resend.emails.send({
+      const info = await transporter.sendMail({
         from,
         to: demo.email,
         subject: template.subject,
         html: template.html,
         text: template.text,
-        replyTo: from,
-        headers: {
-          'X-Idempotency-Key': key,
-        },
-        tags: [
-          { name: 'demo_id', value: demo.id },
-          { name: 'message_type', value: messageType },
-          { name: 'idempotency_key', value: key },
-        ],
+        replyTo: gmailUser,
       });
+
+      console.log(`[MESSAGING] Email ${messageType} sent to ${demo.email}, messageId: ${info.messageId}`);
 
       // Record message - DB constraint will reject if duplicate
       try {
@@ -112,7 +122,7 @@ export class MessagingService {
           recipient: demo.email,
           subject: template.subject,
           body: template.text,
-          external_id: response.data?.id || null,
+          external_id: info.messageId || null,
         });
         return message;
       } catch (dbError: any) {
@@ -124,11 +134,6 @@ export class MessagingService {
         throw dbError;
       }
     } catch (error: any) {
-      // Check if Resend rejected due to duplicate idempotency key
-      if (error?.statusCode === 409) {
-        console.log(`[MESSAGING] Resend rejected duplicate: ${key}`);
-        return null;
-      }
       console.error(`Failed to send email ${messageType}:`, error);
       throw error;
     }

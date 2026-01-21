@@ -28,10 +28,11 @@ export const config = {
     };
   },
 
-  get resend() {
+  get gmail() {
     return {
-      apiKey: getEnv('RESEND_API_KEY'),
-      from: getEnv('EMAIL_FROM'),
+      user: getEnv('GMAIL_USER'),
+      appPassword: getEnv('GMAIL_APP_PASSWORD'),
+      fromName: process.env.GMAIL_FROM_NAME || 'Yahya from Elystra',
     };
   },
 
