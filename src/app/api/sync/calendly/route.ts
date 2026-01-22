@@ -67,30 +67,51 @@ export async function GET() {
 
     const supabase = getSupabase();
 
-    // Get scheduled events from last 24 hours to next 14 days
+    // Get scheduled events from last 7 days to next 90 days (covers everything)
     const minTime = new Date();
-    minTime.setHours(minTime.getHours() - 24);
-    const maxTime = addHours(new Date(), 24 * 14);
+    minTime.setDate(minTime.getDate() - 7);
+    const maxTime = addHours(new Date(), 24 * 90); // 90 days out
 
-    // Fetch scheduled events
-    const eventsRes = await fetch(
-      `https://api.calendly.com/scheduled_events?user=${encodeURIComponent(CALENDLY_USER_URI)}&min_start_time=${minTime.toISOString()}&max_start_time=${maxTime.toISOString()}&status=active`,
-      {
+    // Fetch ALL events with pagination
+    let events: CalendlyEvent[] = [];
+    let nextPageToken: string | null = null;
+    let pageCount = 0;
+    const MAX_PAGES = 20; // Safety limit
+
+    do {
+      const url = new URL('https://api.calendly.com/scheduled_events');
+      url.searchParams.set('user', CALENDLY_USER_URI);
+      url.searchParams.set('min_start_time', minTime.toISOString());
+      url.searchParams.set('max_start_time', maxTime.toISOString());
+      url.searchParams.set('status', 'active');
+      url.searchParams.set('count', '100'); // Max per page
+      if (nextPageToken) {
+        url.searchParams.set('page_token', nextPageToken);
+      }
+
+      const eventsRes = await fetch(url.toString(), {
         headers: {
           'Authorization': `Bearer ${CALENDLY_TOKEN}`,
           'Content-Type': 'application/json'
         }
+      });
+
+      if (!eventsRes.ok) {
+        const error = await eventsRes.text();
+        console.error(`[SYNC:${syncId}] Calendly API error:`, error);
+        return NextResponse.json({ error: 'Calendly API error', details: error }, { status: 500 });
       }
-    );
 
-    if (!eventsRes.ok) {
-      const error = await eventsRes.text();
-      console.error(`[SYNC:${syncId}] Calendly API error:`, error);
-      return NextResponse.json({ error: 'Calendly API error', details: error }, { status: 500 });
-    }
-
-    const eventsData = await eventsRes.json();
-    const events: CalendlyEvent[] = eventsData.collection || [];
+      const eventsData = await eventsRes.json();
+      const pageEvents: CalendlyEvent[] = eventsData.collection || [];
+      events = events.concat(pageEvents);
+      
+      // Check for next page
+      nextPageToken = eventsData.pagination?.next_page_token || null;
+      pageCount++;
+      
+      console.log(`[SYNC:${syncId}] Page ${pageCount}: fetched ${pageEvents.length} events (total: ${events.length})`);
+    } while (nextPageToken && pageCount < MAX_PAGES);
 
     console.log(`[SYNC:${syncId}] Found ${events.length} scheduled events`);
 
@@ -219,22 +240,41 @@ export async function GET() {
       });
     }
 
-    // Handle cancellations
-    const cancelledRes = await fetch(
-      `https://api.calendly.com/scheduled_events?user=${encodeURIComponent(CALENDLY_USER_URI)}&min_start_time=${minTime.toISOString()}&max_start_time=${maxTime.toISOString()}&status=canceled`,
-      {
+    // Handle cancellations (with pagination)
+    let cancelledEvents: CalendlyEvent[] = [];
+    nextPageToken = null;
+    pageCount = 0;
+
+    do {
+      const cancelUrl = new URL('https://api.calendly.com/scheduled_events');
+      cancelUrl.searchParams.set('user', CALENDLY_USER_URI);
+      cancelUrl.searchParams.set('min_start_time', minTime.toISOString());
+      cancelUrl.searchParams.set('max_start_time', maxTime.toISOString());
+      cancelUrl.searchParams.set('status', 'canceled');
+      cancelUrl.searchParams.set('count', '100');
+      if (nextPageToken) {
+        cancelUrl.searchParams.set('page_token', nextPageToken);
+      }
+
+      const cancelledRes = await fetch(cancelUrl.toString(), {
         headers: {
           'Authorization': `Bearer ${CALENDLY_TOKEN}`,
           'Content-Type': 'application/json'
         }
+      });
+
+      if (cancelledRes.ok) {
+        const cancelledData = await cancelledRes.json();
+        cancelledEvents = cancelledEvents.concat(cancelledData.collection || []);
+        nextPageToken = cancelledData.pagination?.next_page_token || null;
+        pageCount++;
+      } else {
+        break;
       }
-    );
+    } while (nextPageToken && pageCount < MAX_PAGES);
 
     let cancelledCount = 0;
-    if (cancelledRes.ok) {
-      const cancelledData = await cancelledRes.json();
-      const cancelledEvents: CalendlyEvent[] = cancelledData.collection || [];
-
+    if (cancelledEvents.length > 0) {
       for (const event of cancelledEvents) {
         const eventUuid = event.uri.split('/').pop()!;
 
