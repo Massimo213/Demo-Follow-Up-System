@@ -56,6 +56,8 @@ export interface ScheduledJob {
   cancelled: boolean;
   processing: boolean;
   processing_started_at: string | null;
+  retry_count: number;
+  last_error: string | null;
   created_at: string;
 }
 

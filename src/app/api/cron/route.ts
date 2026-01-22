@@ -91,7 +91,7 @@ async function processJobWithLock(
   supabase: ReturnType<typeof getSupabase>,
   job: ScheduledJob,
   runId: string
-): Promise<{ job_id: string; status: string; message_id?: string }> {
+): Promise<{ job_id: string; status: string; message_id?: string; error?: string }> {
   
   // Step 1: Atomically claim the job
   const { data: claimed, error: claimError } = await supabase
@@ -164,11 +164,35 @@ async function processJobWithLock(
       message_id: message?.id 
     };
   } catch (err) {
-    // Release the lock on error so it can be retried
-    await supabase
-      .from('scheduled_jobs')
-      .update({ processing: false, processing_started_at: null })
-      .eq('id', job.id);
+    // Increment retry count and release lock
+    const newRetryCount = (job.retry_count || 0) + 1;
+    const maxRetries = 3;
+    
+    if (newRetryCount >= maxRetries) {
+      // Too many failures - mark as cancelled to stop retrying
+      await supabase
+        .from('scheduled_jobs')
+        .update({ 
+          cancelled: true,
+          processing: false,
+          processing_started_at: null,
+          last_error: String(err).slice(0, 500)
+        })
+        .eq('id', job.id);
+      console.error(`[CRON:${runId}] Job ${job.id} permanently failed after ${maxRetries} retries: ${err}`);
+      return { job_id: job.id, status: 'permanently_failed', error: String(err) };
+    } else {
+      // Release lock for retry
+      await supabase
+        .from('scheduled_jobs')
+        .update({ 
+          processing: false, 
+          processing_started_at: null,
+          retry_count: newRetryCount,
+          last_error: String(err).slice(0, 500)
+        })
+        .eq('id', job.id);
+    }
     throw err;
   }
 }
