@@ -63,10 +63,14 @@ export class SchedulerService {
     for (const step of sequence) {
       let scheduledFor: Date;
 
-      // T0 messages: send now
-      if (step.messageType === 'CONFIRM_INITIAL' || step.messageType === 'RECEIPT') {
-        scheduledFor = new Date(now + step.offset);
-      } else if (step.messageType === 'CONFIRM_REMINDER' && demo.demo_type === 'FUTURE') {
+      // T0 messages: send immediately after booking
+      const isImmediateMessage = 
+        step.messageType === 'CONFIRM_INITIAL' || 
+        step.messageType === 'RECEIPT' || 
+        step.messageType === 'SMS_CONFIRM' ||
+        (step.messageType === 'CONFIRM_REMINDER' && demo.demo_type === 'FUTURE');
+      
+      if (isImmediateMessage) {
         scheduledFor = new Date(now + step.offset);
       } else {
         scheduledFor = new Date(scheduledAt + step.offset);
