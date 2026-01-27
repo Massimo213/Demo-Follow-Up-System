@@ -36,10 +36,10 @@ export class SmsTemplates {
         body: `${firstName}, we're on for ${time} for your 7-Minute Elystra Walkthrough. I'll walk you through how agencies are pulling extra deals just from follow-up + payment rail.\nIf anything broke on your side, text R now so I don't sit on Zoom alone :)`,
       }),
       SMS_JOIN_LINK: () => ({
-        body: `${firstName}, I'm ready on the Elystra demo now.\nJoin here: ${demo.join_url}\nIf you're stuck in another call, text R if we should reschedule and pick another time.`,
+        body: `${firstName}, I'm ready on the Elystra demo now.\nJoin: ${demo.join_url}\nIf you're stuck in another call, reply R and we'll reschedule instead of you ghosting.`,
       }),
       SMS_URGENT: () => ({
-        body: `${firstName}, I've been on for a few minutes.\nDo you want to a) reschedule this properly, or b) close the file for now?\nReply A or B.`,
+        body: `${firstName}, I've been on for a few minutes.\nDo you want to (A) reschedule this properly or (B) close the file for now?\nReply A or B.`,
       }),
     };
 
