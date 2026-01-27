@@ -30,7 +30,7 @@ export class SmsTemplates {
 
     const templates: Partial<Record<MessageType, () => SmsTemplate>> = {
       SMS_CONFIRM: () => ({
-        body: `${firstName}, it's Yahya from Elystra.\nI've blocked ${date} ${time} to map your proposals → cash rail in your 7-Minute Elystra Walkthrough.\nReply YES to lock this slot, or R if we should reschedule and pick another time.`,
+        body: `${firstName}, it's the Elystra team.\nI've blocked ${date} ${time} to map your proposals → cash rail in your 7-Minute Elystra Walkthrough.\nReply YES to lock this slot, or R if we should reschedule and pick another time.`,
       }),
       SMS_REMINDER: () => ({
         body: `${firstName}, we're on for ${time} for your 7-Minute Elystra Walkthrough. I'll walk you through how agencies are pulling extra deals just from follow-up + payment rail.\nIf anything broke on your side, text R now so I don't sit on Zoom alone :)`,
