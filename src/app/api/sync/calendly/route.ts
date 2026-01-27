@@ -96,13 +96,13 @@ export async function GET() {
         }
       });
 
-      if (!eventsRes.ok) {
-        const error = await eventsRes.text();
-        console.error(`[SYNC:${syncId}] Calendly API error:`, error);
-        return NextResponse.json({ error: 'Calendly API error', details: error }, { status: 500 });
-      }
+    if (!eventsRes.ok) {
+      const error = await eventsRes.text();
+      console.error(`[SYNC:${syncId}] Calendly API error:`, error);
+      return NextResponse.json({ error: 'Calendly API error', details: error }, { status: 500 });
+    }
 
-      const eventsData = await eventsRes.json();
+    const eventsData = await eventsRes.json();
       const pageEvents: CalendlyEvent[] = eventsData.collection || [];
       events = events.concat(pageEvents);
       

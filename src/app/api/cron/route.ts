@@ -183,15 +183,15 @@ async function processJobWithLock(
       return { job_id: job.id, status: 'permanently_failed', error: String(err) };
     } else {
       // Release lock for retry
-      await supabase
-        .from('scheduled_jobs')
+    await supabase
+      .from('scheduled_jobs')
         .update({ 
           processing: false, 
           processing_started_at: null,
           retry_count: newRetryCount,
           last_error: String(err).slice(0, 500)
         })
-        .eq('id', job.id);
+      .eq('id', job.id);
     }
     throw err;
   }

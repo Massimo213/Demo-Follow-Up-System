@@ -62,39 +62,39 @@ export class EmailTemplates {
   }
 
   /**
-   * Initial confirmation request
+   * Initial confirmation request - binary commitment
    */
   static confirmInitial(demo: Demo): EmailTemplate {
     const time = formatDemoTime(demo);
     const firstName = demo.name.split(' ')[0];
 
     return {
-      subject: `Confirm your demo - ${time}`,
+      subject: `Locked: Elystra demo on ${time}`,
       html: wrapHtml(`
 <p>Hey ${firstName},</p>
 
-<p>You're booked for <strong>${time}</strong>.</p>
+<p>I've locked <strong>${time}</strong> to walk through how agencies are tightening the gap between "send me something" → "we got paid".</p>
 
 <p><strong>Reply YES</strong> to confirm you'll be there.</p>
 
-<p>If something came up, <strong>reply RESCHEDULE</strong> and I'll send you a link to pick a new time.</p>
+<p><strong>Reply RESCHEDULE</strong> if you need a different time and I'll send you new options.</p>
 
-<p>Talk soon.</p>
+<p>– Elystra 7 minutes Walkthrough</p>
       `),
       text: `Hey ${firstName},
 
-You're booked for ${time}.
+I've locked ${time} to walk through how agencies are tightening the gap between "send me something" → "we got paid".
 
 Reply YES to confirm you'll be there.
 
-If something came up, reply RESCHEDULE and I'll send you a link to pick a new time.
+Reply RESCHEDULE if you need a different time and I'll send you new options.
 
-Talk soon.`,
+– Elystra 7 minutes Walkthrough`,
     };
   }
 
   /**
-   * Reminder confirmation
+   * Reminder confirmation - binary with deadline
    */
   static confirmReminder(demo: Demo): EmailTemplate {
     const time = formatShortTime(demo);
@@ -105,184 +105,235 @@ Talk soon.`,
       html: wrapHtml(`
 <p>${firstName},</p>
 
-<p>Quick check - still good for <strong>${time}</strong> today?</p>
+<p>Quick check – are we still good for <strong>${time}</strong> today?</p>
 
-<p><strong>Reply YES</strong> to confirm.</p>
+<p><strong>Reply YES</strong> to keep this time.</p>
 
-<p>If you need to reschedule, just reply RESCHEDULE.</p>
+<p><strong>Reply RESCHEDULE</strong> if something changed – I'd rather move it than have you no-show.</p>
+
+<p class="muted">Reply YES in the next hour, otherwise we'll have to release the slot and we can rebook when you really want to look at this.</p>
+
+<p>– Elystra 7 minutes Walkthrough</p>
       `),
       text: `${firstName},
 
-Quick check - still good for ${time} today?
+Quick check – are we still good for ${time} today?
 
-Reply YES to confirm.
+Reply YES to keep this time.
 
-If you need to reschedule, just reply RESCHEDULE.`,
+Reply RESCHEDULE if something changed – I'd rather move it than have you no-show.
+
+Reply YES in the next hour, otherwise we'll have to release the slot and we can rebook when you really want to look at this.
+
+– Elystra 7 minutes Walkthrough`,
     };
   }
 
   /**
-   * Day-of reminder (4 hours before) - "Your demo is TODAY"
+   * Day-of reminder (4 hours before) - binary commitment
    */
   static dayOfReminder(demo: Demo): EmailTemplate {
     const time = formatShortTime(demo);
     const firstName = demo.name.split(' ')[0];
 
     return {
-      subject: `${firstName} - Your demo is TODAY at ${time}`,
+      subject: `${firstName} – today at ${time}`,
       html: wrapHtml(`
-<p>Hey ${firstName},</p>
+<p>${firstName},</p>
 
-<p>Quick reminder - we're meeting <strong>today at ${time}</strong>.</p>
+<p>We're locked for <strong>today at ${time}</strong> – the 7-minute walkthrough where we map how you're losing deals between "send it over" and "we got paid".</p>
 
 <p>I'll send you the join link closer to the time.</p>
 
-<p><strong>Reply YES</strong> to confirm you'll be there, or <strong>RESCHEDULE</strong> if something came up.</p>
+<p><strong>Reply YES</strong> if you're good.</p>
 
-<p>Looking forward to it.</p>
+<p><strong>Reply RESCHEDULE</strong> if something broke – I'd rather move it than have you ghost.</p>
+
+<p class="muted">No reply = I'll assume we're on.</p>
+
+<p>– Elystra 7 minutes Walkthrough</p>
       `),
-      text: `Hey ${firstName},
+      text: `${firstName},
 
-Quick reminder - we're meeting today at ${time}.
+We're locked for today at ${time} – the 7-minute walkthrough where we map how you're losing deals between "send it over" and "we got paid".
 
 I'll send you the join link closer to the time.
 
-Reply YES to confirm you'll be there, or RESCHEDULE if something came up.
+Reply YES if you're good.
 
-Looking forward to it.`,
+Reply RESCHEDULE if something broke – I'd rather move it than have you ghost.
+
+No reply = I'll assume we're on.
+
+– Elystra 7 minutes Walkthrough`,
     };
   }
 
   /**
-   * Join link (10 min before)
+   * Join link (10 min before) - binary with consequences
    */
   static joinLink(demo: Demo): EmailTemplate {
     const firstName = demo.name.split(' ')[0];
 
     return {
-      subject: `Join link - I'm ready when you are`,
+      subject: `I'm ready – here's the link`,
       html: wrapHtml(`
 <p>${firstName},</p>
 
-<p>Ready to go.</p>
+<p>I'm ready on Zoom. This is the session where we map your numbers and see if Elystra actually deserves a place in your operation.</p>
 
 <a href="${demo.join_url}" class="cta">Join Demo</a>
 
 <p>Or copy this link:<br>
 <span class="muted">${demo.join_url}</span></p>
 
-<p>See you in a few.</p>
+<p>If you're stuck in a meeting, just <strong>reply 5</strong> and I'll hold for 5–10 minutes.</p>
+
+<p>If timing blew up on your side, <strong>reply RESCHEDULE</strong> and we'll pick a slot that actually works.</p>
+
+<p class="muted">If I don't hear back, I'll assume it's not a priority right now and close this on my side.</p>
+
+<p>– Elystra 7 minutes Walkthrough</p>
       `),
       text: `${firstName},
 
-Ready to go.
+I'm ready on Zoom. This is the session where we map your numbers and see if Elystra actually deserves a place in your operation.
 
 Join here: ${demo.join_url}
 
-See you in a few.`,
+If you're stuck in a meeting, just reply 5 and I'll hold for 5–10 minutes.
+
+If timing blew up on your side, reply RESCHEDULE and we'll pick a slot that actually works.
+
+If I don't hear back, I'll assume it's not a priority right now and close this on my side.
+
+– Elystra 7 minutes Walkthrough`,
     };
   }
 
   /**
-   * Urgent join (2 min after start)
+   * Urgent join (2 min after start) - final binary choice
    */
   static joinUrgent(demo: Demo): EmailTemplate {
     const firstName = demo.name.split(' ')[0];
+    const time = formatShortTime(demo);
 
     return {
-      subject: `I'm on the call - join now`,
+      subject: `On the call now – join or reschedule`,
       html: wrapHtml(`
-<p class="urgent">${firstName} - I'm on and waiting.</p>
+<p>${firstName},</p>
+
+<p>I'm on the call now at <strong>${time}</strong>. If you still want to see how agencies are closing extra deals from the follow-up rail, jump in:</p>
 
 <a href="${demo.join_url}" class="cta">Join Now</a>
 
 <p>Link: ${demo.join_url}</p>
-      `),
-      text: `${firstName} - I'm on and waiting.
 
-Join now: ${demo.join_url}`,
+<p>If timing blew up on your side, <strong>reply RESCHEDULE</strong> and we'll pick a slot that actually works.</p>
+
+<p class="muted">If I don't hear back, I'll assume it's not a priority right now and close this on my side.</p>
+
+<p>– Elystra 7 minutes Walkthrough</p>
+      `),
+      text: `${firstName},
+
+I'm on the call now at ${time}. If you still want to see how agencies are closing extra deals from the follow-up rail, jump in:
+
+${demo.join_url}
+
+If timing blew up on your side, reply RESCHEDULE and we'll pick a slot that actually works.
+
+If I don't hear back, I'll assume it's not a priority right now and close this on my side.
+
+– Elystra 7 minutes Walkthrough`,
     };
   }
 
   /**
-   * Offer earlier time (FUTURE demos, T-48h)
+   * Offer earlier time (FUTURE demos, T-48h) - binary with options
    */
   static soonerOffer(demo: Demo): EmailTemplate {
     const time = formatDemoTime(demo);
     const firstName = demo.name.split(' ')[0];
 
     return {
-      subject: `${firstName} - I can pull your demo earlier`,
+      subject: `${firstName} – can pull your demo earlier`,
       html: wrapHtml(`
 <p>${firstName},</p>
 
-<p>Your demo is scheduled for <strong>${time}</strong>.</p>
+<p>Your Elystra walkthrough is locked for <strong>${time}</strong>.</p>
 
-<p>I have a couple slots earlier if you want to get this done sooner:</p>
+<p>I've got a couple slots earlier if you want to knock this out sooner:</p>
 
-<p><strong>Reply 1</strong> - Tomorrow morning<br>
-<strong>Reply 2</strong> - Tomorrow afternoon</p>
+<p><strong>Reply 1</strong> – Tomorrow morning<br>
+<strong>Reply 2</strong> – Tomorrow afternoon<br>
+<strong>Reply YES</strong> – Keep current time</p>
 
-<p>Or just <strong>reply YES</strong> to keep your current time.</p>
+<p class="muted">No reply = we're still on for ${time}.</p>
 
-<p class="muted">No reply? I'll follow up to make sure we're still on.</p>
+<p>– Elystra 7 minutes Walkthrough</p>
       `),
       text: `${firstName},
 
-Your demo is scheduled for ${time}.
+Your Elystra walkthrough is locked for ${time}.
 
-I have a couple slots earlier if you want to get this done sooner:
+I've got a couple slots earlier if you want to knock this out sooner:
 
-Reply 1 - Tomorrow morning
-Reply 2 - Tomorrow afternoon
+Reply 1 – Tomorrow morning
+Reply 2 – Tomorrow afternoon
+Reply YES – Keep current time
 
-Or just reply YES to keep your current time.
+No reply = we're still on for ${time}.
 
-No reply? I'll follow up to make sure we're still on.`,
+– Elystra 7 minutes Walkthrough`,
     };
   }
 
   /**
-   * Receipt / calendar confirmation
+   * Receipt / calendar confirmation - sets expectations
    */
   static receipt(demo: Demo): EmailTemplate {
     const time = formatDemoTime(demo);
     const firstName = demo.name.split(' ')[0];
 
     return {
-      subject: `You're all set - ${time}`,
+      subject: `Locked: ${time}`,
       html: wrapHtml(`
 <p>${firstName},</p>
 
-<p>You're confirmed for <strong>${time}</strong>.</p>
+<p>You're locked for <strong>${time}</strong>.</p>
 
 <p><strong>Join link:</strong> <a href="${demo.join_url}">${demo.join_url}</a></p>
 
-<p>What to expect:</p>
+<p>What we'll cover in 7 minutes:</p>
 <ul>
-  <li>Quick 15-minute overview</li>
-  <li>See exactly how this fits your use case</li>
-  <li>Q&A</li>
+  <li>Where deals are dying between "send it over" → "we got paid"</li>
+  <li>How agencies are tightening that gap with Elystra</li>
+  <li>Whether this actually fits your operation</li>
 </ul>
 
 <p>I'll send a reminder before we start.</p>
 
-<p class="muted">Need to change the time? Just reply to this email.</p>
+<p><strong>Reply RESCHEDULE</strong> if timing changes – I'd rather move it than have you no-show.</p>
+
+<p>– Elystra 7 minutes Walkthrough</p>
       `),
       text: `${firstName},
 
-You're confirmed for ${time}.
+You're locked for ${time}.
 
 Join link: ${demo.join_url}
 
-What to expect:
-- Quick 15-minute overview
-- See exactly how this fits your use case
-- Q&A
+What we'll cover in 7 minutes:
+- Where deals are dying between "send it over" → "we got paid"
+- How agencies are tightening that gap with Elystra
+- Whether this actually fits your operation
 
 I'll send a reminder before we start.
 
-Need to change the time? Just reply to this email.`,
+Reply RESCHEDULE if timing changes – I'd rather move it than have you no-show.
+
+– Elystra 7 minutes Walkthrough`,
     };
   }
 }
