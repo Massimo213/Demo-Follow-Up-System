@@ -40,7 +40,6 @@ const SEQUENCES: Record<DemoType, SequenceStep[]> = {
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'SMS_CONFIRM', offset: 2000 },
     { messageType: 'CONFIRM_REMINDER', offset: TIMING.FUTURE.T_PLUS_24H },
-    { messageType: 'SOONER_OFFER', offset: -TIMING.FUTURE.T_MINUS_48H },
     { messageType: 'DAY_OF_REMINDER', offset: -TIMING.FUTURE.T_MINUS_4H },
     { messageType: 'SMS_REMINDER', offset: -TIMING.SMS.T_MINUS_2H },
     { messageType: 'JOIN_LINK', offset: -TIMING.FUTURE.T_MINUS_10M },
