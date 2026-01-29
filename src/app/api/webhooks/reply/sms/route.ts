@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const intent = parseIntent(body);
     const firstName = demo?.name?.split(' ')[0] || 'there';
     
-    // Save reply to database
+    // Save reply to database with sender name
     const { error: insertError } = await supabase
       .from('replies')
       .insert({
@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
         body: body,
         intent: intent,
         processed: false,
+        sender_name: demo?.name || null,
       });
 
     if (insertError) {
