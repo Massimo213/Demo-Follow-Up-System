@@ -59,6 +59,26 @@ What day/time works best for you this week? The walkthrough is only 7 minutes, s
 Just text me the day and time.`;
 }
 
+// INVARIANT: Every message must have a sender_name. No nulls, no blanks.
+function deriveSenderName(demoName: string | null | undefined, phone: string): string {
+  // Priority 1: Use demo name if available
+  if (demoName && demoName.trim()) {
+    return demoName.trim();
+  }
+  
+  // Priority 2: Format phone as fallback (never return empty)
+  // +14165551234 → "Contact (416) 555-1234"
+  const cleaned = phone.replace(/[^\d]/g, '');
+  if (cleaned.length >= 10) {
+    const last10 = cleaned.slice(-10);
+    const formatted = `(${last10.slice(0, 3)}) ${last10.slice(3, 6)}-${last10.slice(6)}`;
+    return `Contact ${formatted}`;
+  }
+  
+  // Last resort: use raw phone
+  return `Contact ${phone}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Twilio sends form-urlencoded data
@@ -89,9 +109,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     const intent = parseIntent(body);
-    const firstName = demo?.name?.split(' ')[0] || 'there';
     
-    // Save reply to database with sender name
+    // INVARIANT: sender_name must ALWAYS be present, never null
+    // Priority: demo name > phone-derived fallback
+    const senderName = deriveSenderName(demo?.name, from);
+    const firstName = senderName.split(' ')[0];
+    
+    // Save reply to database with sender name (REQUIRED)
     const { error: insertError } = await supabase
       .from('replies')
       .insert({
@@ -101,7 +125,7 @@ export async function POST(request: NextRequest) {
         body: body,
         intent: intent,
         processed: false,
-        sender_name: demo?.name || null,
+        sender_name: senderName, // Never null
       });
 
     if (insertError) {
