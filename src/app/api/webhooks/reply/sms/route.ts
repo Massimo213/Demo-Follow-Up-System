@@ -27,11 +27,18 @@ function getTwilio() {
   );
 }
 
-// Notify owner on their personal phone about SMS replies
-async function notifyOwner(senderName: string, message: string, intent: string): Promise<void> {
-  const ownerPhone = process.env.OWNER_PHONE_NUMBER;
-  if (!ownerPhone) {
-    console.log('[SMS REPLY] No OWNER_PHONE_NUMBER configured, skipping notification');
+// Notify owners on their personal phones about SMS replies
+// Supports multiple phone numbers via comma-separated OWNER_PHONE_NUMBERS env var
+async function notifyOwners(senderName: string, message: string, intent: string): Promise<void> {
+  const ownerPhones = process.env.OWNER_PHONE_NUMBERS;
+  if (!ownerPhones) {
+    console.log('[SMS REPLY] No OWNER_PHONE_NUMBERS configured, skipping notification');
+    return;
+  }
+
+  const phoneNumbers = ownerPhones.split(',').map(p => p.trim()).filter(p => p);
+  if (phoneNumbers.length === 0) {
+    console.log('[SMS REPLY] No valid phone numbers in OWNER_PHONE_NUMBERS');
     return;
   }
 
@@ -41,15 +48,22 @@ async function notifyOwner(senderName: string, message: string, intent: string):
     
     const notification = `📱 ${senderName} replied:\n"${truncatedMessage}"\n\n→ Intent: ${intent}`;
     
-    await twilio.messages.create({
-      body: notification,
-      from: process.env.TWILIO_PHONE_NUMBER!,
-      to: ownerPhone,
-    });
+    // Send to all owner phones in parallel
+    await Promise.all(
+      phoneNumbers.map(phone => 
+        twilio.messages.create({
+          body: notification,
+          from: process.env.TWILIO_PHONE_NUMBER!,
+          to: phone,
+        }).catch(err => {
+          console.error(`[SMS REPLY] Failed to notify ${phone}:`, err);
+        })
+      )
+    );
     
-    console.log(`[SMS REPLY] Owner notified about reply from ${senderName}`);
+    console.log(`[SMS REPLY] Owners notified (${phoneNumbers.length} phones) about reply from ${senderName}`);
   } catch (error) {
-    console.error('[SMS REPLY] Failed to notify owner:', error);
+    console.error('[SMS REPLY] Failed to notify owners:', error);
     // Don't throw - notification failure shouldn't break the webhook
   }
 }
@@ -236,8 +250,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Notify owner on their personal phone about this reply
-    await notifyOwner(senderName, body, intent);
+    // Notify owners on their personal phones about this reply
+    await notifyOwners(senderName, body, intent);
 
     // Return TwiML with auto-reply if needed
     if (autoReply) {
