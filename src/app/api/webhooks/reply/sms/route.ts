@@ -2,12 +2,14 @@
  * SMS Reply Webhook
  * Receives incoming SMS from Twilio and processes them
  * Auto-replies for RESCHEDULE requests
+ * Notifies owner on their phone for every reply
  * 
  * POST /api/webhooks/reply/sms
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import Twilio from 'twilio';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +18,40 @@ function getSupabase() {
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!
   );
+}
+
+function getTwilio() {
+  return Twilio(
+    process.env.TWILIO_ACCOUNT_SID!,
+    process.env.TWILIO_AUTH_TOKEN!
+  );
+}
+
+// Notify owner on their personal phone about SMS replies
+async function notifyOwner(senderName: string, message: string, intent: string): Promise<void> {
+  const ownerPhone = process.env.OWNER_PHONE_NUMBER;
+  if (!ownerPhone) {
+    console.log('[SMS REPLY] No OWNER_PHONE_NUMBER configured, skipping notification');
+    return;
+  }
+
+  try {
+    const twilio = getTwilio();
+    const truncatedMessage = message.length > 100 ? message.slice(0, 100) + '...' : message;
+    
+    const notification = `📱 ${senderName} replied:\n"${truncatedMessage}"\n\n→ Intent: ${intent}`;
+    
+    await twilio.messages.create({
+      body: notification,
+      from: process.env.TWILIO_PHONE_NUMBER!,
+      to: ownerPhone,
+    });
+    
+    console.log(`[SMS REPLY] Owner notified about reply from ${senderName}`);
+  } catch (error) {
+    console.error('[SMS REPLY] Failed to notify owner:', error);
+    // Don't throw - notification failure shouldn't break the webhook
+  }
 }
 
 // Parse intent from message
@@ -199,6 +235,9 @@ export async function POST(request: NextRequest) {
         console.log(`[SMS REPLY] Reschedule requested for ${demo.email}`);
       }
     }
+
+    // Notify owner on their personal phone about this reply
+    await notifyOwner(senderName, body, intent);
 
     // Return TwiML with auto-reply if needed
     if (autoReply) {
