@@ -50,8 +50,11 @@ function getTwilio(): Twilio.Twilio {
   return _twilio;
 }
 
-// SMS message types
-const SMS_TYPES: MessageType[] = ['SMS_CONFIRM', 'SMS_REMINDER', 'SMS_JOIN_LINK', 'SMS_URGENT'];
+// SMS message types - routed to Twilio instead of Gmail
+const SMS_TYPES: MessageType[] = [
+  'SMS_CONFIRM', 'SMS_REMINDER', 'SMS_JOIN_LINK', 'SMS_URGENT',
+  'EVENING_BEFORE', 'SMS_DAY_BEFORE',
+];
 
 export class MessagingService {
   /**
@@ -96,7 +99,7 @@ export class MessagingService {
     if (!gmailUser) throw new Error('GMAIL_USER not configured');
 
     // Display name for "From" field
-    const fromName = process.env.GMAIL_FROM_NAME || 'Yahya from Elystra';
+    const fromName = process.env.GMAIL_FROM_NAME || 'David from Elystra';
     const from = `"${fromName}" <${gmailUser}>`;
 
     const transporter = getGmailTransporter();

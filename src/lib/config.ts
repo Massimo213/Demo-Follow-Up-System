@@ -61,25 +61,25 @@ export const config = {
 // Timing constants (in milliseconds)
 export const TIMING = {
   SAME_DAY: {
-    T_MINUS_60M: 60 * 60 * 1000,
-    T_MINUS_10M: 10 * 60 * 1000,
-    T_PLUS_2M: 2 * 60 * 1000,
+    T_MINUS_30M: 30 * 60 * 1000,     // SMS reminder 30 min before
+    T_MINUS_10M: 10 * 60 * 1000,     // Join link email
+    T_PLUS_8M: 8 * 60 * 1000,        // No-show SMS (A/B)
+    T_PLUS_1H: 60 * 60 * 1000,       // Post no-show email
   },
   NEXT_DAY: {
-    T_MINUS_4H: 4 * 60 * 60 * 1000,
-    T_MINUS_10M: 10 * 60 * 1000,
-    T_PLUS_2M: 2 * 60 * 1000,
+    T_MINUS_4H: 4 * 60 * 60 * 1000,  // Morning-of email reminder
+    T_MINUS_30M: 30 * 60 * 1000,     // SMS reminder 30 min before
+    T_MINUS_10M: 10 * 60 * 1000,     // Join link email
+    T_PLUS_8M: 8 * 60 * 1000,        // No-show SMS (A/B)
+    T_PLUS_1H: 60 * 60 * 1000,       // Post no-show email
   },
   FUTURE: {
-    T_PLUS_24H: 24 * 60 * 60 * 1000,
-    T_MINUS_48H: 48 * 60 * 60 * 1000,
-    T_MINUS_4H: 4 * 60 * 60 * 1000,  // Day-of reminder (morning of demo)
-    T_MINUS_10M: 10 * 60 * 1000,
-    T_PLUS_2M: 2 * 60 * 1000,
-  },
-  SMS: {
-    T_MINUS_2H: 2 * 60 * 60 * 1000,   // SMS reminder 2 hours before
-    T_MINUS_5M: 5 * 60 * 1000,        // SMS join link 5 min before
-    T_PLUS_5M: 5 * 60 * 1000,         // SMS urgent 5 min after
+    T_MINUS_48H: 48 * 60 * 60 * 1000, // Value bomb email
+    T_MINUS_24H: 24 * 60 * 60 * 1000, // Day-before SMS
+    T_MINUS_4H: 4 * 60 * 60 * 1000,   // Morning-of email reminder
+    T_MINUS_30M: 30 * 60 * 1000,      // SMS reminder 30 min before
+    T_MINUS_10M: 10 * 60 * 1000,      // Join link email
+    T_PLUS_8M: 8 * 60 * 1000,         // No-show SMS (A/B)
+    T_PLUS_1H: 60 * 60 * 1000,        // Post no-show email
   },
 } as const;

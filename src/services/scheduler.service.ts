@@ -1,58 +1,75 @@
 /**
- * Scheduler Service
- * Manages job scheduling - works locally without QStash
- * Jobs are stored in DB and processed by /api/cron
+ * Scheduler Service v2
+ * Sharp, consequence-driven sequences
+ * 6-7 meaningful touches, not 9 fluffy ones
+ * 
+ * SAME_DAY: 4 touches + 2 no-show = 6
+ * NEXT_DAY: 6 touches + 2 no-show = 8
+ * FUTURE:   7 touches + 2 no-show = 9
  */
 
 import { db } from '@/lib/db';
 import type { Demo, DemoType, MessageType, ScheduledJob } from '@/types/demo';
 import { TIMING } from '@/lib/config';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 type SequenceStep = {
   messageType: MessageType;
-  offset: number; // ms from scheduled_at (negative = before)
-  requiresConfirmation?: boolean;
+  offset: number;
+  specialTiming?: 'EVENING_BEFORE'; // computed dynamically
 };
 
 const SEQUENCES: Record<DemoType, SequenceStep[]> = {
+  // SAME_DAY: 4 before + 2 no-show
   SAME_DAY: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'SMS_CONFIRM', offset: 2000 },
-    { messageType: 'CONFIRM_REMINDER', offset: -TIMING.SAME_DAY.T_MINUS_60M },
-    { messageType: 'SMS_REMINDER', offset: -TIMING.SMS.T_MINUS_2H },
+    { messageType: 'SMS_REMINDER', offset: -TIMING.SAME_DAY.T_MINUS_30M },
     { messageType: 'JOIN_LINK', offset: -TIMING.SAME_DAY.T_MINUS_10M },
-    { messageType: 'SMS_JOIN_LINK', offset: -TIMING.SMS.T_MINUS_5M },
-    { messageType: 'JOIN_URGENT', offset: TIMING.SAME_DAY.T_PLUS_2M },
-    { messageType: 'SMS_URGENT', offset: TIMING.SMS.T_PLUS_5M },
+    { messageType: 'SMS_URGENT', offset: TIMING.SAME_DAY.T_PLUS_8M },
+    { messageType: 'POST_NO_SHOW', offset: TIMING.SAME_DAY.T_PLUS_1H },
   ],
+
+  // NEXT_DAY: 6 before + 2 no-show
   NEXT_DAY: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'SMS_CONFIRM', offset: 2000 },
-    { messageType: 'RECEIPT', offset: 3000 },
+    { messageType: 'EVENING_BEFORE', offset: 0, specialTiming: 'EVENING_BEFORE' },
     { messageType: 'CONFIRM_REMINDER', offset: -TIMING.NEXT_DAY.T_MINUS_4H },
-    { messageType: 'SMS_REMINDER', offset: -TIMING.SMS.T_MINUS_2H },
+    { messageType: 'SMS_REMINDER', offset: -TIMING.NEXT_DAY.T_MINUS_30M },
     { messageType: 'JOIN_LINK', offset: -TIMING.NEXT_DAY.T_MINUS_10M },
-    { messageType: 'SMS_JOIN_LINK', offset: -TIMING.SMS.T_MINUS_5M },
-    { messageType: 'JOIN_URGENT', offset: TIMING.SAME_DAY.T_PLUS_2M },
-    { messageType: 'SMS_URGENT', offset: TIMING.SMS.T_PLUS_5M },
+    { messageType: 'SMS_URGENT', offset: TIMING.NEXT_DAY.T_PLUS_8M },
+    { messageType: 'POST_NO_SHOW', offset: TIMING.NEXT_DAY.T_PLUS_1H },
   ],
+
+  // FUTURE: 7 before + 2 no-show
   FUTURE: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'SMS_CONFIRM', offset: 2000 },
-    { messageType: 'CONFIRM_REMINDER', offset: TIMING.FUTURE.T_PLUS_24H },
+    { messageType: 'VALUE_BOMB', offset: -TIMING.FUTURE.T_MINUS_48H },
+    { messageType: 'SMS_DAY_BEFORE', offset: -TIMING.FUTURE.T_MINUS_24H },
     { messageType: 'DAY_OF_REMINDER', offset: -TIMING.FUTURE.T_MINUS_4H },
-    { messageType: 'SMS_REMINDER', offset: -TIMING.SMS.T_MINUS_2H },
+    { messageType: 'SMS_REMINDER', offset: -TIMING.FUTURE.T_MINUS_30M },
     { messageType: 'JOIN_LINK', offset: -TIMING.FUTURE.T_MINUS_10M },
-    { messageType: 'SMS_JOIN_LINK', offset: -TIMING.SMS.T_MINUS_5M },
-    { messageType: 'JOIN_URGENT', offset: TIMING.FUTURE.T_PLUS_2M },
-    { messageType: 'SMS_URGENT', offset: TIMING.SMS.T_PLUS_5M },
+    { messageType: 'SMS_URGENT', offset: TIMING.FUTURE.T_PLUS_8M },
+    { messageType: 'POST_NO_SHOW', offset: TIMING.FUTURE.T_PLUS_1H },
   ],
 };
 
+/**
+ * Calculate 7pm local time the evening before the demo
+ */
+function calculateEveningBefore(demo: Demo): Date {
+  const demoLocal = toZonedTime(new Date(demo.scheduled_at), demo.timezone);
+  const eveningLocal = new Date(demoLocal);
+  eveningLocal.setDate(eveningLocal.getDate() - 1);
+  eveningLocal.setHours(19, 0, 0, 0); // 7pm local time
+  return fromZonedTime(eveningLocal, demo.timezone);
+}
+
 export class SchedulerService {
   /**
-   * Schedule all jobs for a demo - stores in DB
-   * No QStash needed
+   * Schedule all jobs for a demo
    */
   static async scheduleSequence(demo: Demo): Promise<void> {
     const sequence = SEQUENCES[demo.demo_type];
@@ -62,14 +79,15 @@ export class SchedulerService {
     for (const step of sequence) {
       let scheduledFor: Date;
 
-      // T0 messages: send immediately after booking
+      // Immediate messages: send right after booking
       const isImmediateMessage = 
         step.messageType === 'CONFIRM_INITIAL' || 
-        step.messageType === 'RECEIPT' || 
-        step.messageType === 'SMS_CONFIRM' ||
-        (step.messageType === 'CONFIRM_REMINDER' && demo.demo_type === 'FUTURE');
+        step.messageType === 'SMS_CONFIRM';
       
-      if (isImmediateMessage) {
+      if (step.specialTiming === 'EVENING_BEFORE') {
+        // Special: 7pm local time the evening before
+        scheduledFor = calculateEveningBefore(demo);
+      } else if (isImmediateMessage) {
         scheduledFor = new Date(now + step.offset);
       } else {
         scheduledFor = new Date(scheduledAt + step.offset);
@@ -86,7 +104,7 @@ export class SchedulerService {
   }
 
   /**
-   * Schedule a single job - just insert into DB
+   * Schedule a single job
    */
   static async scheduleJob(
     demo: Demo,
@@ -97,7 +115,7 @@ export class SchedulerService {
     
     const job = await db.jobs.upsert({
       demo_id: demo.id,
-      qstash_message_id: null, // Not using QStash
+      qstash_message_id: null,
       message_type: messageType,
       scheduled_for: scheduledFor.toISOString(),
       executed: false,
@@ -107,30 +125,18 @@ export class SchedulerService {
     return job;
   }
 
-  /**
-   * Cancel all pending jobs for a demo
-   */
   static async cancelAllJobs(demoId: string): Promise<void> {
     await db.jobs.cancel(demoId);
   }
 
-  /**
-   * Cancel specific job types
-   */
   static async cancelJobTypes(demoId: string, messageTypes: MessageType[]): Promise<void> {
     await db.jobs.cancel(demoId, messageTypes);
   }
 
-  /**
-   * Mark job as executed
-   */
   static async markExecuted(demoId: string, messageType: MessageType): Promise<void> {
     await db.jobs.markExecuted(demoId, messageType);
   }
 
-  /**
-   * Check if job should execute
-   */
   static async shouldExecute(demoId: string, messageType: MessageType): Promise<boolean> {
     const job = await db.jobs.findByDemoAndType(demoId, messageType);
     if (!job || job.cancelled) return false;
@@ -138,7 +144,6 @@ export class SchedulerService {
     const demo = await db.demos.findById(demoId);
     if (!demo) return false;
 
-    // Only skip if explicitly cancelled or rescheduled
     if (['CANCELLED', 'RESCHEDULED'].includes(demo.status)) {
       return false;
     }

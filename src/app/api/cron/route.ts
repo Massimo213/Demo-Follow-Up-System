@@ -50,7 +50,7 @@ export async function GET() {
       .eq('cancelled', false)
       .eq('processing', false)
       .lte('scheduled_for', now.toISOString())
-      .limit(10); // Process max 10 jobs per run to prevent timeout
+      .limit(25); // Process max 25 jobs per run - handles 12+ concurrent demos
 
     if (error) {
       console.error(`[CRON:${runId}] Query error:`, error);

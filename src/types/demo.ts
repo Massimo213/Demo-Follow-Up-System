@@ -25,7 +25,11 @@ export type MessageType =
   | 'SMS_CONFIRM'
   | 'SMS_REMINDER'
   | 'SMS_JOIN_LINK'
-  | 'SMS_URGENT';
+  | 'SMS_URGENT'
+  | 'EVENING_BEFORE'
+  | 'VALUE_BOMB'
+  | 'SMS_DAY_BEFORE'
+  | 'POST_NO_SHOW';
 
 export interface Demo {
   id: string;
