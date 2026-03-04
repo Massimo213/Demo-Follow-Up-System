@@ -54,6 +54,7 @@ export class EmailTemplates {
   static getTemplate(messageType: MessageType, demo: Demo): EmailTemplate | null {
     const templates: Partial<Record<MessageType, () => EmailTemplate>> = {
       CONFIRM_INITIAL: () => this.confirmInitial(demo),
+      CONFIRM_INITIAL_LOOM: () => this.confirmInitialLoom(demo),
       CONFIRM_REMINDER: () => this.confirmReminder(demo),
       DAY_OF_REMINDER: () => this.dayOfReminder(demo),
       VALUE_BOMB: () => this.valueBomb(demo),
@@ -128,6 +129,53 @@ Reply RESCHEDULE if you need a different time.
   }
 
   /**
+   * CONFIRM_INITIAL_LOOM: FUTURE demos — confirm with Loom intro video
+   */
+  static confirmInitialLoom(demo: Demo): EmailTemplate {
+    const time = formatDemoTime(demo);
+    const firstName = demo.name.split(' ')[0];
+    const loomUrl = process.env.LOOM_URL || 'https://www.loom.com/share/your-demo-intro';
+
+    return {
+      subject: `Locked: 7-minute Elystra walkthrough -- ${time}`,
+      html: wrapHtml(`
+<p>Hey ${firstName},</p>
+
+<p>I've locked <strong>${time}</strong> for your 7-minute walkthrough.</p>
+
+<p>Before we hop on, I recorded a quick 2‑minute intro so you know exactly what to expect:</p>
+
+<p><a href="${loomUrl}" class="cta">Watch the intro</a></p>
+
+<p>166 agencies went from 45% to 66% close rate by tightening the gap between "send it over" and "we got paid." I'll show you how in 7 minutes.</p>
+
+${demo.join_url ? `<p><strong>Join link:</strong> <a href="${demo.join_url}">${demo.join_url}</a></p>` : ''}
+
+<p><strong>Reply YES</strong> to confirm.</p>
+
+<p><strong>Reply RESCHEDULE</strong> if you need a different time.</p>
+
+<p>-- David, Elystra</p>
+      `),
+      text: `Hey ${firstName},
+
+I've locked ${time} for your 7-minute walkthrough.
+
+Watch a 2‑min intro before we hop on: ${loomUrl}
+
+166 agencies went from 45% to 66% close rate. I'll show you how in 7 minutes.
+
+${demo.join_url ? `Join link: ${demo.join_url}` : ''}
+
+Reply YES to confirm.
+
+Reply RESCHEDULE if you need a different time.
+
+-- David, Elystra`,
+    };
+  }
+
+  /**
    * CONFIRM_REMINDER: Morning-of for NEXT_DAY (T-4h)
    * Passive aggression: "so I know whether to release the slot"
    */
@@ -165,8 +213,7 @@ Reply RESCHEDULE if something changed.
   }
 
   /**
-   * DAY_OF_REMINDER: Morning-of for FUTURE demos (T-4h)
-   * Same pressure, different framing
+   * DAY_OF_REMINDER: T-4h for FUTURE demos — day-of reminder + value bomb
    */
   static dayOfReminder(demo: Demo): EmailTemplate {
     const time = formatShortTime(demo);
@@ -177,25 +224,25 @@ Reply RESCHEDULE if something changed.
       html: wrapHtml(`
 <p>${firstName},</p>
 
-<p>I'd like to confirm we're still on for <strong>${time} today</strong>. I have a few people waiting for a slot, so I want to make sure yours is held.</p>
+<p>We're on for <strong>${time} today</strong>. Quick number: one agency using this exact flow pulled $14K in overdue invoices within 48 hours — no hiring, no extra spend.</p>
 
-<p>7 minutes. We'll map where your deals are leaking between "send it over" and "we got paid." 166 agencies already tightened that gap -- I'll show you exactly how.</p>
+<p>166 agencies went from 45% to 66% close rate. 7 minutes to see if it fits your operation.</p>
 
 <p><strong>Reply YES</strong> to hold your slot.</p>
 
-<p><strong>Reply RESCHEDULE</strong> if something broke -- I'd rather move it than have an empty chair.</p>
+<p><strong>Reply RESCHEDULE</strong> if something broke — I'd rather move it than have an empty chair.</p>
 
 <p>-- David, Elystra</p>
       `),
       text: `${firstName},
 
-I'd like to confirm we're still on for ${time} today. I have a few people waiting for a slot, so I want to make sure yours is held.
+We're on for ${time} today. Quick number: one agency pulled $14K in overdue invoices within 48 hours — no hiring, no extra spend.
 
-7 minutes. We'll map where your deals are leaking between "send it over" and "we got paid." 166 agencies already tightened that gap -- I'll show you exactly how.
+166 agencies went from 45% to 66% close rate. 7 minutes to see if it fits your operation.
 
 Reply YES to hold your slot.
 
-Reply RESCHEDULE if something broke -- I'd rather move it than have an empty chair.
+Reply RESCHEDULE if something broke — I'd rather move it than have an empty chair.
 
 -- David, Elystra`,
     };

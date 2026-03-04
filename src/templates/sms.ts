@@ -39,12 +39,17 @@ export class SmsTemplates {
 
       // Immediate: lock commitment, open channel
       SMS_CONFIRM: () => ({
-        body: `${firstName}, it's David from Elystra.\n${date} at ${time} -- your 7-minute walkthrough is locked.\n166 agencies went from 45% to 66% close rate using this flow.\nReply YES to confirm, or R to reschedule.`,
+        body: `${firstName}, it's David from Elystra.\n${date} at ${time} -- your 7-minute audit  is locked.\n excited to show you how our 166 agencies went from 45% to 70% close rate using this flow.\nReply YES to confirm, or R to reschedule.`,
       }),
 
       // T-30min: last check, scarcity
       SMS_REMINDER: () => ({
-        body: `${firstName}, we're on in 30 minutes for your 7-minute Elystra walkthrough.\nIf something came up, text R now so I can release the slot to someone on the waitlist.`,
+        body: `${firstName}, we're on in 30 minutes for your 7-minute audit.\nIf something came up, text R now so I can release the slot to someone on the waitlist.`,
+      }),
+
+      // CONFIRM_REMINDER (SMS fallback when no email): T-4h for NEXT_DAY
+      CONFIRM_REMINDER: () => ({
+        body: `${firstName}, we're on today at ${time} for your 7-minute Elystra walkthrough. Reply YES to confirm, or R to reschedule.`,
       }),
 
       // Evening before (NEXT_DAY only): gut-check

@@ -2,9 +2,11 @@
  * Local Cron Endpoint
  * Call this every minute to process due messages
  * 
+ * Handles BOTH pre-demo (scheduled_jobs) and post-demo (prospect_scheduled_jobs).
+ * 
  * IDEMPOTENCY GUARANTEES:
  * 1. Jobs are claimed atomically (processing=true) before execution
- * 2. Messages table has UNIQUE(demo_id, message_type) - DB rejects duplicates
+ * 2. Messages table has UNIQUE(demo_id/prospect_id, message_type) - DB rejects duplicates
  * 3. Resend receives idempotency key - prevents duplicate sends on retry
  * 4. Stale locks auto-release after 5 minutes
  * 
@@ -14,7 +16,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { MessagingService } from '@/services/messaging.service';
+import { ProspectMessagingService } from '@/services/prospect-messaging.service';
 import type { Demo, ScheduledJob, MessageType } from '@/types/demo';
+import type { Prospect, ProspectScheduledJob, ProspectMessageType } from '@/types/prospect';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,14 +39,15 @@ export async function GET() {
 
     const supabase = getSupabase();
 
-    // First, release any stale locks (jobs stuck processing for > 5 min)
+    // Release stale locks for both pipelines
     try {
       await supabase.rpc('release_stale_jobs');
-    } catch {
-      // Function might not exist yet, ignore
-    }
+    } catch { /* not yet created */ }
+    try {
+      await supabase.rpc('release_stale_prospect_jobs');
+    } catch { /* not yet created */ }
 
-    // Get all pending jobs that are due AND not already processing
+    // ─── PRE-DEMO JOBS ───
     const { data: dueJobs, error } = await supabase
       .from('scheduled_jobs')
       .select('*')
@@ -50,36 +55,65 @@ export async function GET() {
       .eq('cancelled', false)
       .eq('processing', false)
       .lte('scheduled_for', now.toISOString())
-      .limit(25); // Process max 25 jobs per run - handles 12+ concurrent demos
+      .limit(25);
 
     if (error) {
-      console.error(`[CRON:${runId}] Query error:`, error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error(`[CRON:${runId}] Demo jobs query error:`, error);
     }
 
-    if (!dueJobs || dueJobs.length === 0) {
+    // ─── POST-DEMO JOBS ───
+    const { data: dueProspectJobs, error: pError } = await supabase
+      .from('prospect_scheduled_jobs')
+      .select('*')
+      .eq('executed', false)
+      .eq('cancelled', false)
+      .eq('processing', false)
+      .lte('scheduled_for', now.toISOString())
+      .limit(25);
+
+    if (pError) {
+      console.error(`[CRON:${runId}] Prospect jobs query error:`, pError);
+    }
+
+    const demoCount = dueJobs?.length || 0;
+    const prospectCount = dueProspectJobs?.length || 0;
+
+    if (demoCount === 0 && prospectCount === 0) {
       console.log(`[CRON:${runId}] No due jobs found`);
-      return NextResponse.json({ status: 'ok', processed: 0, due_jobs: 0 });
+      return NextResponse.json({ status: 'ok', demo_processed: 0, prospect_processed: 0 });
     }
 
-    console.log(`[CRON:${runId}] Found ${dueJobs.length} due jobs`);
+    console.log(`[CRON:${runId}] Found ${demoCount} demo jobs, ${prospectCount} prospect jobs`);
 
-    const results = [];
-    for (const job of dueJobs as ScheduledJob[]) {
+    const demoResults = [];
+    for (const job of (dueJobs || []) as ScheduledJob[]) {
       try {
         const result = await processJobWithLock(supabase, job, runId);
-        results.push(result);
+        demoResults.push(result);
       } catch (err) {
         console.error(`[CRON:${runId}] Job ${job.id} failed:`, err);
-        results.push({ job_id: job.id, status: 'error', error: String(err) });
+        demoResults.push({ job_id: job.id, status: 'error', error: String(err) });
+      }
+    }
+
+    const prospectResults = [];
+    for (const job of (dueProspectJobs || []) as ProspectScheduledJob[]) {
+      try {
+        const result = await processProspectJobWithLock(supabase, job, runId);
+        prospectResults.push(result);
+      } catch (err) {
+        console.error(`[CRON:${runId}] Prospect job ${job.id} failed:`, err);
+        prospectResults.push({ job_id: job.id, status: 'error', error: String(err) });
       }
     }
 
     return NextResponse.json({ 
       status: 'ok', 
       run_id: runId,
-      processed: results.length,
-      results 
+      demo_processed: demoResults.length,
+      prospect_processed: prospectResults.length,
+      demo_results: demoResults,
+      prospect_results: prospectResults,
     });
   } catch (error) {
     console.error(`[CRON:${runId}] Error:`, error);
@@ -205,6 +239,123 @@ async function markCompleted(supabase: ReturnType<typeof getSupabase>, jobId: st
       executed_at: new Date().toISOString(),
       processing: false,
       processing_started_at: null
+    })
+    .eq('id', jobId);
+}
+
+// ─── POST-DEMO PROSPECT JOB PROCESSOR ───
+
+async function processProspectJobWithLock(
+  supabase: ReturnType<typeof getSupabase>,
+  job: ProspectScheduledJob,
+  runId: string
+): Promise<{ job_id: string; status: string; message_id?: string; error?: string }> {
+  
+  const { data: claimed, error: claimError } = await supabase
+    .from('prospect_scheduled_jobs')
+    .update({ processing: true, processing_started_at: new Date().toISOString() })
+    .eq('id', job.id)
+    .eq('executed', false)
+    .eq('cancelled', false)
+    .eq('processing', false)
+    .select('id')
+    .single();
+
+  if (claimError || !claimed) {
+    console.log(`[CRON:${runId}] Prospect job ${job.id} already claimed`);
+    return { job_id: job.id, status: 'already_claimed' };
+  }
+
+  try {
+    const { data: prospect, error: pError } = await supabase
+      .from('prospects')
+      .select('*')
+      .eq('id', job.prospect_id)
+      .single();
+
+    if (pError || !prospect) {
+      await markProspectJobCompleted(supabase, job.id);
+      return { job_id: job.id, status: 'skipped_no_prospect' };
+    }
+
+    if (['CLOSED_WON', 'CLOSED_LOST'].includes(prospect.status)) {
+      await markProspectJobCompleted(supabase, job.id);
+      return { job_id: job.id, status: 'skipped_terminal_state' };
+    }
+
+    if (prospect.status === 'PAUSED') {
+      // Release lock — job stays pending, will retry when unpaused
+      await supabase
+        .from('prospect_scheduled_jobs')
+        .update({ processing: false, processing_started_at: null })
+        .eq('id', job.id);
+      return { job_id: job.id, status: 'skipped_paused' };
+    }
+
+    const { data: existingMsg } = await supabase
+      .from('prospect_messages')
+      .select('id')
+      .eq('prospect_id', job.prospect_id)
+      .eq('message_type', job.message_type)
+      .limit(1);
+
+    if (existingMsg && existingMsg.length > 0) {
+      await markProspectJobCompleted(supabase, job.id);
+      return { job_id: job.id, status: 'already_sent' };
+    }
+
+    const message = await ProspectMessagingService.sendMessage(
+      prospect as Prospect,
+      job.message_type as ProspectMessageType
+    );
+
+    await markProspectJobCompleted(supabase, job.id);
+
+    console.log(`[CRON:${runId}] Sent prospect ${job.message_type} to ${prospect.email}`);
+
+    return { job_id: job.id, status: 'sent', message_id: message?.id };
+  } catch (err) {
+    const newRetryCount = (job.retry_count || 0) + 1;
+    const maxRetries = 3;
+
+    if (newRetryCount >= maxRetries) {
+      await supabase
+        .from('prospect_scheduled_jobs')
+        .update({
+          cancelled: true,
+          processing: false,
+          processing_started_at: null,
+          last_error: String(err).slice(0, 500),
+        })
+        .eq('id', job.id);
+      console.error(`[CRON:${runId}] Prospect job ${job.id} permanently failed after ${maxRetries} retries`);
+      return { job_id: job.id, status: 'permanently_failed', error: String(err) };
+    } else {
+      await supabase
+        .from('prospect_scheduled_jobs')
+        .update({
+          processing: false,
+          processing_started_at: null,
+          retry_count: newRetryCount,
+          last_error: String(err).slice(0, 500),
+        })
+        .eq('id', job.id);
+    }
+    throw err;
+  }
+}
+
+async function markProspectJobCompleted(
+  supabase: ReturnType<typeof getSupabase>,
+  jobId: string
+) {
+  await supabase
+    .from('prospect_scheduled_jobs')
+    .update({
+      executed: true,
+      executed_at: new Date().toISOString(),
+      processing: false,
+      processing_started_at: null,
     })
     .eq('id', jobId);
 }

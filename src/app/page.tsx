@@ -7,6 +7,7 @@ export default function Home() {
     <main style={{ fontFamily: 'system-ui', padding: '40px', maxWidth: '600px' }}>
       <h1>Demo Followup System</h1>
       <p>API-only service. No UI here.</p>
+      <p><a href="/post-demo">Add post-demo prospect →</a></p>
       
       <h2>Endpoints</h2>
       <ul>

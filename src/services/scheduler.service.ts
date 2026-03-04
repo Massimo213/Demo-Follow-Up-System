@@ -1,71 +1,43 @@
 /**
- * Scheduler Service v2
- * Sharp, consequence-driven sequences
- * 6-7 meaningful touches, not 9 fluffy ones
- * 
- * SAME_DAY: 4 touches + 2 no-show = 6
- * NEXT_DAY: 6 touches + 2 no-show = 8
- * FUTURE:   7 touches + 2 no-show = 9
+ * Scheduler Service v3
+ * Reduced, sharp follow-up sequences
+ *
+ * SAME_DAY (<4h): 3 touches — email confirm, SMS 30m, join link 10m
+ * NEXT_DAY:       4 touches — confirm, T-4h reminder (email/SMS), SMS 30m, join link
+ * FUTURE:         5 touches — Loom confirm, T-24h SMS, T-4h value bomb, SMS 30m, join link
  */
 
 import { db } from '@/lib/db';
 import type { Demo, DemoType, MessageType, ScheduledJob } from '@/types/demo';
 import { TIMING } from '@/lib/config';
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 type SequenceStep = {
   messageType: MessageType;
   offset: number;
-  specialTiming?: 'EVENING_BEFORE'; // computed dynamically
 };
 
 const SEQUENCES: Record<DemoType, SequenceStep[]> = {
-  // SAME_DAY: 4 before + 2 no-show
   SAME_DAY: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
-    { messageType: 'SMS_CONFIRM', offset: 2000 },
     { messageType: 'SMS_REMINDER', offset: -TIMING.SAME_DAY.T_MINUS_30M },
     { messageType: 'JOIN_LINK', offset: -TIMING.SAME_DAY.T_MINUS_10M },
-    { messageType: 'SMS_URGENT', offset: TIMING.SAME_DAY.T_PLUS_8M },
-    { messageType: 'POST_NO_SHOW', offset: TIMING.SAME_DAY.T_PLUS_1H },
   ],
 
-  // NEXT_DAY: 6 before + 2 no-show
   NEXT_DAY: [
     { messageType: 'CONFIRM_INITIAL', offset: 0 },
-    { messageType: 'SMS_CONFIRM', offset: 2000 },
-    { messageType: 'EVENING_BEFORE', offset: 0, specialTiming: 'EVENING_BEFORE' },
     { messageType: 'CONFIRM_REMINDER', offset: -TIMING.NEXT_DAY.T_MINUS_4H },
     { messageType: 'SMS_REMINDER', offset: -TIMING.NEXT_DAY.T_MINUS_30M },
     { messageType: 'JOIN_LINK', offset: -TIMING.NEXT_DAY.T_MINUS_10M },
-    { messageType: 'SMS_URGENT', offset: TIMING.NEXT_DAY.T_PLUS_8M },
-    { messageType: 'POST_NO_SHOW', offset: TIMING.NEXT_DAY.T_PLUS_1H },
   ],
 
-  // FUTURE: 7 before + 2 no-show
   FUTURE: [
-    { messageType: 'CONFIRM_INITIAL', offset: 0 },
-    { messageType: 'SMS_CONFIRM', offset: 2000 },
-    { messageType: 'VALUE_BOMB', offset: -TIMING.FUTURE.T_MINUS_48H },
+    { messageType: 'CONFIRM_INITIAL_LOOM', offset: 0 },
     { messageType: 'SMS_DAY_BEFORE', offset: -TIMING.FUTURE.T_MINUS_24H },
     { messageType: 'DAY_OF_REMINDER', offset: -TIMING.FUTURE.T_MINUS_4H },
     { messageType: 'SMS_REMINDER', offset: -TIMING.FUTURE.T_MINUS_30M },
     { messageType: 'JOIN_LINK', offset: -TIMING.FUTURE.T_MINUS_10M },
-    { messageType: 'SMS_URGENT', offset: TIMING.FUTURE.T_PLUS_8M },
-    { messageType: 'POST_NO_SHOW', offset: TIMING.FUTURE.T_PLUS_1H },
   ],
 };
-
-/**
- * Calculate 7pm local time the evening before the demo
- */
-function calculateEveningBefore(demo: Demo): Date {
-  const demoLocal = toZonedTime(new Date(demo.scheduled_at), demo.timezone);
-  const eveningLocal = new Date(demoLocal);
-  eveningLocal.setDate(eveningLocal.getDate() - 1);
-  eveningLocal.setHours(19, 0, 0, 0); // 7pm local time
-  return fromZonedTime(eveningLocal, demo.timezone);
-}
 
 export class SchedulerService {
   /**
@@ -79,15 +51,11 @@ export class SchedulerService {
     for (const step of sequence) {
       let scheduledFor: Date;
 
-      // Immediate messages: send right after booking
-      const isImmediateMessage = 
-        step.messageType === 'CONFIRM_INITIAL' || 
-        step.messageType === 'SMS_CONFIRM';
-      
-      if (step.specialTiming === 'EVENING_BEFORE') {
-        // Special: 7pm local time the evening before
-        scheduledFor = calculateEveningBefore(demo);
-      } else if (isImmediateMessage) {
+      const isImmediateMessage =
+        step.messageType === 'CONFIRM_INITIAL' ||
+        step.messageType === 'CONFIRM_INITIAL_LOOM';
+
+      if (isImmediateMessage) {
         scheduledFor = new Date(now + step.offset);
       } else {
         scheduledFor = new Date(scheduledAt + step.offset);

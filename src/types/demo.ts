@@ -16,6 +16,7 @@ export type MessageChannel = 'EMAIL' | 'SMS';
 
 export type MessageType =
   | 'CONFIRM_INITIAL'
+  | 'CONFIRM_INITIAL_LOOM'
   | 'CONFIRM_REMINDER'
   | 'DAY_OF_REMINDER'
   | 'JOIN_LINK'

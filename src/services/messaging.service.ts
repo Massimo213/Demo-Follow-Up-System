@@ -59,15 +59,25 @@ const SMS_TYPES: MessageType[] = [
 export class MessagingService {
   /**
    * Send message (routes to email or SMS based on type)
-   * @param demo - The demo record
-   * @param messageType - Type of message to send
-   * @param idempotencyKey - Optional key to prevent duplicate sends
+   * CONFIRM_REMINDER: email if ext, SMS if !ext (no email)
    */
   static async sendMessage(
-    demo: Demo, 
+    demo: Demo,
     messageType: MessageType,
     idempotencyKey?: string
   ): Promise<Message | null> {
+    // CONFIRM_REMINDER: channel varies — email if ext, SMS if !ext
+    if (messageType === 'CONFIRM_REMINDER') {
+      if (demo.email?.trim()) {
+        return this.sendEmail(demo, messageType, idempotencyKey);
+      }
+      if (demo.phone?.trim()) {
+        return this.sendSms(demo, messageType);
+      }
+      console.log(`[MESSAGING] No email or phone for CONFIRM_REMINDER, skipping`);
+      return null;
+    }
+
     if (SMS_TYPES.includes(messageType)) {
       return this.sendSms(demo, messageType);
     }
