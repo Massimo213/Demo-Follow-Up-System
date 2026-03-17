@@ -4,7 +4,7 @@
  *
  * SAME_DAY (<4h): 3 touches — email confirm, SMS 30m, join link 10m
  * NEXT_DAY:       4 touches — confirm, T-4h reminder (email/SMS), SMS 30m, join link
- * FUTURE:         5 touches — Loom confirm, T-24h SMS, T-4h value bomb, SMS 30m, join link
+ * FUTURE:         5 touches — confirm, T-24h SMS, T-4h value bomb, SMS 30m, join link
  */
 
 import { db } from '@/lib/db';
@@ -31,7 +31,7 @@ const SEQUENCES: Record<DemoType, SequenceStep[]> = {
   ],
 
   FUTURE: [
-    { messageType: 'CONFIRM_INITIAL_LOOM', offset: 0 },
+    { messageType: 'CONFIRM_INITIAL', offset: 0 },
     { messageType: 'SMS_DAY_BEFORE', offset: -TIMING.FUTURE.T_MINUS_24H },
     { messageType: 'DAY_OF_REMINDER', offset: -TIMING.FUTURE.T_MINUS_4H },
     { messageType: 'SMS_REMINDER', offset: -TIMING.FUTURE.T_MINUS_30M },
@@ -52,8 +52,7 @@ export class SchedulerService {
       let scheduledFor: Date;
 
       const isImmediateMessage =
-        step.messageType === 'CONFIRM_INITIAL' ||
-        step.messageType === 'CONFIRM_INITIAL_LOOM';
+        step.messageType === 'CONFIRM_INITIAL';
 
       if (isImmediateMessage) {
         scheduledFor = new Date(now + step.offset);

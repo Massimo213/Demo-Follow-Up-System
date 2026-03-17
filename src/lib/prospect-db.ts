@@ -124,6 +124,20 @@ export const prospectDb = {
       if (error) throw error;
       return (data as Prospect[]) || [];
     },
+
+    async findActiveBySearch(query: string): Promise<Prospect | null> {
+      const raw = query.trim().replace(/"/g, '""');
+      const pattern = `"%${raw}%"`;
+      const { data, error } = await table('prospects')
+        .select('*')
+        .eq('status', 'ACTIVE')
+        .or(`name.ilike.${pattern},email.ilike.${pattern},agency_name.ilike.${pattern}`)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const list = Array.isArray(data) ? data : data ? [data] : [];
+      return (list[0] as Prospect) || null;
+    },
   },
 
   jobs: {
