@@ -72,10 +72,10 @@ export class PostDemoEmailTemplates {
    */
   static recapGo(prospect: Prospect): EmailTemplate {
     const name = firstName(prospect);
-    const X = prospect.proposals_per_month;
-    const Y = prospect.avg_deal_size;
-    const Z = prospect.close_rate;
-    const D = prospect.time_to_cash_days;
+    const X = prospect.proposals_per_month ?? 0;
+    const Y = prospect.avg_deal_size ?? 0;
+    const Z = prospect.close_rate ?? 0;
+    const D = prospect.time_to_cash_days ?? 0;
     const dealsClosed = (X * Z) / 100;
     const dealsDying = X * (1 - Z / 100);
     const oneDealValue = Y;

@@ -17,10 +17,22 @@ const CreateProspectSchema = z.object({
   email: z.string().email('Valid email required'),
   phone: z.string().nullish().transform((v) => (v && v.trim() ? v.trim() : null)),
   agency_name: z.string().min(1, 'Agency name required'),
-  proposals_per_month: z.coerce.number().int().positive('Proposals/month must be > 0'),
-  avg_deal_size: z.coerce.number().int().positive('Avg deal size must be > 0'),
-  close_rate: z.coerce.number().min(1).max(99, 'Close rate must be 1-99%'),
-  time_to_cash_days: z.coerce.number().int().positive('Days to cash must be > 0'),
+  proposals_per_month: z.preprocess(
+    (v) => { if (v === '' || v === undefined || v === null) return null; const n = Number(v); return Number.isNaN(n) ? null : n; },
+    z.union([z.number().int().positive(), z.null()])
+  ),
+  avg_deal_size: z.preprocess(
+    (v) => { if (v === '' || v === undefined || v === null) return null; const n = Number(v); return Number.isNaN(n) ? null : n; },
+    z.union([z.number().int().positive(), z.null()])
+  ),
+  close_rate: z.preprocess(
+    (v) => { if (v === '' || v === undefined || v === null) return null; const n = Number(v); return Number.isNaN(n) ? null : n; },
+    z.union([z.number().min(1).max(99), z.null()])
+  ),
+  time_to_cash_days: z.preprocess(
+    (v) => { if (v === '' || v === undefined || v === null) return null; const n = Number(v); return Number.isNaN(n) ? null : n; },
+    z.union([z.number().int().positive(), z.null()])
+  ),
   objection_type: z.enum([
     'NEED_PARTNER_APPROVAL',
     'CHECKING_INTEGRATIONS',
@@ -56,10 +68,10 @@ export async function POST(req: NextRequest) {
       email: parsed.email.toLowerCase(),
       phone: parsed.phone || null,
       agency_name: parsed.agency_name,
-      proposals_per_month: parsed.proposals_per_month,
-      avg_deal_size: parsed.avg_deal_size,
-      close_rate: parsed.close_rate,
-      time_to_cash_days: parsed.time_to_cash_days,
+      proposals_per_month: parsed.proposals_per_month ?? null,
+      avg_deal_size: parsed.avg_deal_size ?? null,
+      close_rate: parsed.close_rate ?? null,
+      time_to_cash_days: parsed.time_to_cash_days ?? null,
       objection_type: parsed.objection_type,
       notes: parsed.notes || null,
       demo_date: parsed.demo_date,

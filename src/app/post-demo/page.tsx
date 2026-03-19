@@ -9,10 +9,10 @@ interface ProspectRow {
   name: string;
   email: string;
   agency_name: string;
-  proposals_per_month: number;
-  avg_deal_size: number;
-  close_rate: number;
-  time_to_cash_days: number;
+  proposals_per_month: number | null;
+  avg_deal_size: number | null;
+  close_rate: number | null;
+  time_to_cash_days: number | null;
   status: string;
   demo_date: string;
   created_at: string;
@@ -62,6 +62,12 @@ function $(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 }
 
+function optNum(s: string, min: number, max?: number): number | null {
+  const n = max != null ? parseFloat(s) : parseInt(s, 10);
+  if (Number.isNaN(n)) return null;
+  return (max != null ? n >= min && n <= max : n > min) ? n : null;
+}
+
 const STATUS_LABELS: Record<string, { label: string; bg: string; fg: string }> = {
   ACTIVE: { label: 'Active', bg: '#dbeafe', fg: '#1d4ed8' },
   CLOSED_WON: { label: 'Won', bg: '#dcfce7', fg: '#16a34a' },
@@ -103,10 +109,10 @@ export default function PostDemoPage() {
           name: form.name.trim(),
           email: form.email.trim().toLowerCase(),
           agency_name: form.agency_name.trim(),
-          proposals_per_month: parseInt(form.proposals_per_month),
-          avg_deal_size: parseInt(form.avg_deal_size),
-          close_rate: parseFloat(form.close_rate),
-          time_to_cash_days: parseInt(form.time_to_cash_days),
+          proposals_per_month: optNum(form.proposals_per_month, 0),
+          avg_deal_size: optNum(form.avg_deal_size, 0),
+          close_rate: optNum(form.close_rate, 1, 99),
+          time_to_cash_days: optNum(form.time_to_cash_days, 0),
           objection_type: form.objection_type,
           demo_date: form.demo_date,
           phone: form.phone.trim() || null,
@@ -119,7 +125,7 @@ export default function PostDemoPage() {
         setToast({ ok: false, text: data.details?.[0]?.message || data.error || 'Failed' });
         return;
       }
-      setToast({ ok: true, text: `${form.agency_name} added — first email in 30 min` });
+      setToast({ ok: true, text: `${form.agency_name} added — 3 emails at Day 3, 6, 10` });
       setForm(BLANK);
       loadProspects();
     } catch (err) {
@@ -173,12 +179,12 @@ export default function PostDemoPage() {
               <input style={inp} placeholder="Agency *" value={form.agency_name} onChange={(e) => set('agency_name', e.target.value)} required />
 
               <div style={row}>
-                <input style={inpH} type="number" min="1" placeholder="Proposals/mo *" value={form.proposals_per_month} onChange={(e) => set('proposals_per_month', e.target.value)} required />
-                <input style={inpH} type="number" min="1" placeholder="Deal size $ *" value={form.avg_deal_size} onChange={(e) => set('avg_deal_size', e.target.value)} required />
+                <input style={inpH} type="number" min="1" placeholder="Proposals/mo (optional)" value={form.proposals_per_month} onChange={(e) => set('proposals_per_month', e.target.value)} />
+                <input style={inpH} type="number" min="1" placeholder="Deal size $ (optional)" value={form.avg_deal_size} onChange={(e) => set('avg_deal_size', e.target.value)} />
               </div>
               <div style={row}>
-                <input style={inpH} type="number" min="1" max="99" step="0.1" placeholder="Close % *" value={form.close_rate} onChange={(e) => set('close_rate', e.target.value)} required />
-                <input style={inpH} type="number" min="1" placeholder="Days to cash *" value={form.time_to_cash_days} onChange={(e) => set('time_to_cash_days', e.target.value)} required />
+                <input style={inpH} type="number" min="1" max="99" step="0.1" placeholder="Close % (optional)" value={form.close_rate} onChange={(e) => set('close_rate', e.target.value)} />
+                <input style={inpH} type="number" min="1" placeholder="Days to cash (optional)" value={form.time_to_cash_days} onChange={(e) => set('time_to_cash_days', e.target.value)} />
               </div>
 
               <div style={row}>
@@ -245,9 +251,12 @@ function ProspectCard({ p, onStatus, compact }: { p: ProspectRow; onStatus: (id:
           <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: st.bg, color: st.fg }}>{st.label}</span>
         </div>
         <div style={{ fontSize: 13, color: '#666' }}>
-          {p.name} &middot; {p.proposals_per_month} props/mo &middot; {$(p.avg_deal_size)} avg &middot; {p.close_rate}% close
+          {p.name}
+          {(p.proposals_per_month != null || p.avg_deal_size != null || p.close_rate != null) && (
+            <> &middot; {p.proposals_per_month ?? '—'} props/mo &middot; {p.avg_deal_size != null ? $(p.avg_deal_size) : '—'} avg &middot; {p.close_rate ?? '—'}% close</>
+          )}
         </div>
-        {!compact && (
+        {!compact && p.roi.monthly_gap > 0 && (
           <div style={{ fontSize: 12, color: '#0066ff', fontWeight: 600, marginTop: 4 }}>
             Leak: {$(p.roi.monthly_gap)}/mo &middot; {$(p.roi.annual_gap)}/yr
           </div>

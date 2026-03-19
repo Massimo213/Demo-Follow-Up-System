@@ -33,10 +33,10 @@ interface ProspectInsert {
   email: string;
   phone: string | null;
   agency_name: string;
-  proposals_per_month: number;
-  avg_deal_size: number;
-  close_rate: number;
-  time_to_cash_days: number;
+  proposals_per_month: number | null;
+  avg_deal_size: number | null;
+  close_rate: number | null;
+  time_to_cash_days: number | null;
   objection_type: string;
   notes: string | null;
   demo_date: string;
