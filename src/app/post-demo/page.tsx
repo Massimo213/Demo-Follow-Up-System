@@ -151,7 +151,7 @@ export default function PostDemoPage() {
         <div style={{ marginBottom: 32 }}>
           <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: '#0066ff' }}>ELYSTRA</span>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: '4px 0 4px', color: '#111' }}>Post-Demo Prospects</h1>
-          <p style={{ fontSize: 14, color: '#666', margin: 0 }}>Add a prospect after the demo. 4 emails fire automatically using their numbers.</p>
+          <p style={{ fontSize: 14, color: '#666', margin: 0 }}>Add a prospect after the demo. 3 emails fire automatically (Day 3, 6, 10). Touch 1 is manual: send the Infrastructure Assessment PDF first.</p>
         </div>
 
         {/* ─── Two-column: form left, active right ─── */}

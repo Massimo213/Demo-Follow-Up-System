@@ -1,6 +1,6 @@
 /**
  * Post-Demo Email Templates
- * 4-touch kill-or-close sequence.
+ * 4-touch post-demo sequence.
  * Every message re-anchors to their numbers. Binary: implement or close file.
  */
 
@@ -30,6 +30,10 @@ function wrapHtml(content: string): string {
     .gap-box { background: #fff3f3; border-left: 4px solid #e53e3e; padding: 16px 20px; margin: 20px 0; border-radius: 0 6px 6px 0; }
     .gap-box strong { color: #e53e3e; }
     .result-box { background: #f0fff4; border-left: 4px solid #38a169; padding: 16px 20px; margin: 20px 0; border-radius: 0 6px 6px 0; }
+    .forward-block { background: #f8f9fa; border: 1px solid #e2e8f0; padding: 20px; margin: 20px 0; font-style: italic; border-radius: 6px; }
+    table.delta { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    table.delta th, table.delta td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    table.delta th { background: #f8f9fa; font-weight: 600; }
     .result-box strong { color: #38a169; }
     ul.recap { margin: 12px 0; padding-left: 20px; }
     ul.recap li { margin: 6px 0; }
@@ -84,7 +88,21 @@ export class PostDemoEmailTemplates {
     const html = `
 <p>Hey ${name},</p>
 
-<p>Quick recap from today in hard numbers:</p>
+<p>Good speaking today.</p>
+
+<p>Attached is the Revenue Infrastructure Assessment built from the numbers and friction points we discussed on the demo.</p>
+
+<p>It is not a generic recap. It is something you can actually use internally if this needs to be reviewed with a partner or anyone else on your side.</p>
+
+<p>The assessment lays out, clearly:</p>
+<ul class="recap">
+  <li>where revenue is currently leaking in your sales motion,</li>
+  <li>what Elystra changes operationally,</li>
+  <li>what the Elystra Delta looks like across 170+ pipelines,</li>
+  <li>and what the activation path looks like if you decide to move.</li>
+</ul>
+
+<p>Quick reminder of the numbers we mapped:</p>
 <ul class="recap">
   <li>Proposals sent/month: ~${X}</li>
   <li>Avg deal size: ~${formatCurrency(Y)}</li>
@@ -92,399 +110,242 @@ export class PostDemoEmailTemplates {
   <li>Days from "yes" to cash in bank: ~${D}</li>
 </ul>
 
-<p>That means, right now you're:</p>
-<ul class="recap">
-  <li>Closing ≈ ${dealsClosed.toFixed(1)} deals/month</li>
-  <li>Letting ≈ ${dealsDying.toFixed(0)} deals die after the proposal</li>
-  <li>Waiting ${D} days to see money from deals you've already won</li>
-</ul>
-
-<p>Across agency pipelines that look like yours, a pessimistic Elystra Delta is:</p>
+<p>At those numbers, even a conservative Elystra Delta matters:</p>
 <ul class="recap">
   <li>+1–2 recovered deals/month from the same proposal volume</li>
   <li>10–15 days faster from "yes" → cash collected</li>
 </ul>
 
-<p>At your ACV (~${formatCurrency(Y)}):</p>
+<p>At your ACV (~${formatCurrency(Y)}), that is roughly:</p>
 <ul class="recap">
   <li>+1 deal/month = +${formatCurrency(oneDealValue)}/month ≈ ${formatCurrency(annualOneDeal)}/year</li>
   <li>+2 deals/month = +${formatCurrency(twoDealsValue)}/month ≈ ${formatCurrency(annualTwoDeals)}/year</li>
 </ul>
 
-<p>Elystra is $1,500/month.</p>
 
-<p>If Elystra only helps you claw back 1 extra serious deal/month, your net after paying us is roughly ${formatCurrency(netOneDeal)}.<br>
+
+<p>If it only helps you claw back 1 extra serious deal/month, your net after paying us is roughly ${formatCurrency(netOneDeal)}.<br>
 At 2 extra deals/month, you're closer to ${formatCurrency(netTwoDeals)} in net lift.</p>
 
-<p>You're not buying software.<br>
-You're deciding whether to keep burning those 1–2 deals every month, or not.</p>
-
-<hr class="sep">
-
-<h3>What Elystra actually changes</h3>
-
-<p>You already saw the UI. Here's the impact in plain language:</p>
-
-<p><strong>1. Proposal Clone + Engine</strong><br>
-Same proposal structure you use today, rebuilt inside Elystra:</p>
-<ul class="recap">
-  <li>Your section titles and flow (e.g. "Strategy", "Investment", "Performance Dashboard")</li>
-  <li>Your pricing logic (retainers, minimums, add-ons, terms)</li>
-  <li>Zero admin work for the team, no ugly Canva / PowerPoint versioning</li>
-  <li>Visually better than what most of your competitors send</li>
-</ul>
-<p>You keep your narrative and pricing logic. We remove grunt work and upgrade how you show up.</p>
-
-<hr class="sep">
-
-<p><strong>2. Sign → Pay in one rail</strong></p>
-<p>Client signs and pays in the same motion.</p>
-<p>You stop:</p>
-<ul class="recap">
-  <li>Waiting 20–30 days for "we'll get this to finance"</li>
-  <li>Chasing invoices</li>
-  <li>Letting closed-won sit as uncollected</li>
-</ul>
-<p>You become the agency that closes and collects cleanly, not the one that "follows up on invoices" for weeks.</p>
-
-<p><strong>3. X-Ray on every deal</strong></p>
-<p>You see exactly:</p>
-<ul class="recap">
-  <li>Who opened</li>
-  <li>Which sections they read</li>
-  <li>Where interest dies</li>
-</ul>
-<p>Follow-ups stop being "just checking in" and become surgical pushes at the choke-points. Pipeline reviews become data ("Section X kills deals") instead of stories.</p>
-
-<p><strong>4. Behavior-based follow-ups</strong></p>
-<p>Elystra triggers nudges when:</p>
-<ul class="recap">
-  <li>Pricing is viewed but the proposal isn't signed</li>
-  <li>Signatures are done but payment is missing</li>
-</ul>
-<p>That's where the 1–2 extra closes per month quietly come from — the deals that used to die after "send the proposal over".</p>
-
-<hr class="sep">
-
-<h3>How we wire Elystra around how you sell</h3>
-
-<p>If this matches reality on your side, next step is simple: we configure Elystra to mirror your rail.</p>
-
-<p>Over 1–2 days we:</p>
-<ul class="recap">
-  <li><strong>Proposal structure</strong> – mirror your exact section titles, order, naming and flow, so clients still feel "this is our deck", just cleaner.</li>
-  <li><strong>Pricing logic</strong> – encode your real economics: retainers, project fees, minimums, deposits, add-ons, term lengths. Reps stop rebuilding pricing in their heads.</li>
-  <li><strong>Payment methods & rules</strong> – plug in how you actually collect: card / bank, upfront vs split payments, % retainers, when funds are due, what triggers invoicing.</li>
-  <li><strong>Integrations</strong> – connect to your CRM / billing / project tools so deals, invoices and delivery don't get lost between systems. Sales, finance and delivery all see the same truth.</li>
-  <li><strong>Email & follow-up tone</strong> (optional but lethal) – train reminders and nudges to sound like you: your phrasing, your directness, your warmth level. Same voice, just automated and behavior-driven.</li>
-  <li><strong>User seats & permissions</strong> – map owners, AEs, CS, finance. Who can send, who approves, who sees money.</li>
-</ul>
-<p>$1,500/month includes 2 seats. Additional seats (AEs, CS) are $250/seat with role-based permissions.</p>
-
-<p>In short: Elystra adapts to how you sell. Your team keeps running the same motion — the rail underneath just stops leaking.</p>
-
-<hr class="sep">
-
-<h3>Here's the deal:</h3>
-
-<p>Run Elystra on your next 5–10 serious proposals for 30 days. If the deals you run through it don't close at a higher rate and don't pull cash in faster than your current setup, we refund the month. No forms, no negotiation, no conditions.</p>
-
-<p>We either move your numbers, or you get your money back and we both walk.</p>
-
-<hr class="sep">
-
-<h3>Binary next step</h3>
-
-<p>If you want to fix the rail:</p>
-<p>Let us know your stand within the next 2 days. Then the next steps are:</p>
-<ol>
-  <li>Spin up your account,</li>
-  <li>Mirror your proposal structure + pricing,</li>
-  <li>Wire in payment + integrations,</li>
-  <li>Run your first live deal through Elystra this week.</li>
-</ol>
-
-<p>If this isn't a priority, let us know and we close your file instead of dragging this out.</p>
+<p>If the assessment is directionally right on your side, the next step is simple: review it internally and let us know your stand.</p>
 
 <p>-- David, Elystra</p>`;
 
     const text = `Hey ${name},
 
-Quick recap from today in hard numbers:
+Good speaking today.
+
+Attached is the Revenue Infrastructure Assessment built from the numbers and friction points we discussed on the demo.
+
+It is not a generic recap. It is something you can actually use internally if this needs to be reviewed with a partner or anyone else on your side.
+
+The assessment lays out clearly:
+- where revenue is currently leaking in your sales motion
+- what Elystra changes operationally
+- what the Elystra Delta looks like across 170+ pipelines
+- and what the activation path looks like if you decide to move
+
+Quick reminder of the numbers we mapped:
 - Proposals sent/month: ~${X}
 - Avg deal size: ~${formatCurrency(Y)}
 - Close rate after proposal: ~${Z}%
 - Days from "yes" to cash in bank: ~${D}
 
-That means, right now you're:
-- Closing ≈ ${dealsClosed.toFixed(1)} deals/month
-- Letting ≈ ${dealsDying.toFixed(0)} deals die after the proposal
-- Waiting ${D} days to see money from deals you've already won
-
-Across agency pipelines that look like yours, a pessimistic Elystra Delta is:
+At those numbers, even a conservative Elystra Delta matters:
 - +1–2 recovered deals/month from the same proposal volume
 - 10–15 days faster from "yes" → cash collected
 
-At your ACV (~${formatCurrency(Y)}):
+At your ACV (~${formatCurrency(Y)}), that is roughly:
 - +1 deal/month = +${formatCurrency(oneDealValue)}/month ≈ ${formatCurrency(annualOneDeal)}/year
 - +2 deals/month = +${formatCurrency(twoDealsValue)}/month ≈ ${formatCurrency(annualTwoDeals)}/year
 
-Elystra is $1,500/month.
 
-If Elystra only helps you claw back 1 extra serious deal/month, your net after paying us is roughly ${formatCurrency(netOneDeal)}. At 2 extra deals/month, you're closer to ${formatCurrency(netTwoDeals)} in net lift.
+If it only helps you claw back 1 extra serious deal/month, your net after paying us is roughly ${formatCurrency(netOneDeal)}. At 2 extra deals/month, you're closer to ${formatCurrency(netTwoDeals)} in net lift.
 
-You're not buying software. You're deciding whether to keep burning those 1–2 deals every month, or not.
-
-What Elystra actually changes:
-1. Proposal Clone + Engine — Same structure, same pricing logic, rebuilt in minutes. Zero admin, no Canva versioning.
-2. Sign → Pay in one rail — Client signs and pays in same motion. No 20-30 day finance delays, no invoice chasing.
-3. X-Ray on every deal — Who opened, which sections they read, where interest dies. Surgical follow-ups.
-4. Behavior-based follow-ups — Nudges when pricing viewed but not signed, signed but not paid. That's where 1-2 extra closes come from.
-
-How we wire it: We configure your proposal structure, pricing logic, payment methods, integrations, email tone, seats/permissions. $1,500/month includes 2 seats. Additional seats $250/seat. Elystra adapts to how you sell.
-
-Here's the deal: Run Elystra on your next 5-10 serious proposals for 30 days. If deals don't close at a higher rate and don't pull cash faster, we refund the month. No forms, no negotiation.
-
-Binary next step:
-Let us know your stand within the next 2 days. Then: spin up account, mirror structure + pricing, wire payment + integrations, run first live deal through Elystra this week.
-
-If this isn't a priority, let us know and we close your file instead of dragging this out.
+If the assessment is directionally right on your side, the next step is simple: review it internally and let us know your stand.
 
 -- David, Elystra`;
 
     return {
-      subject: `${name}, quick recap in numbers`,
+      subject: `Revenue Infrastructure Assessment for ${name}`,
       html: wrapHtml(html),
       text,
     };
   }
 
   /**
-   * Touch 2 (Day 2): Internal politics + one-proposal test
-   * Arm the champion to win the internal fight.
+   * Touch 1 (Day 3): Decision path — they have the Assessment, what's next?
    */
   static internalPolitics(prospect: Prospect): EmailTemplate {
     const name = firstName(prospect);
-    const roi = calculateROI(prospect);
-    const X = prospect.proposals_per_month;
-    const Y = prospect.avg_deal_size;
-    const Z = prospect.close_rate;
-    const D = prospect.time_to_cash_days;
-    const dealsDying = X * (1 - Z / 100);
-    const agencyLink = prospect.agency_proposal_link || process.env.ELYSTRA_AGENCY_PROPOSAL_LINK || prospect.pricing_page_url;
 
     return {
-      subject: `${name} — internal team version + proposal link`,
+      subject: `Decision path, ${name}`,
       html: wrapHtml(`
 <p>Hey ${name},</p>
 
-<p>You'd need to loop in your internal team. Here's the clean version of the story for them:</p>
+<p>You have the Revenue Infrastructure Assessment on your side now.</p>
 
-<ol>
-  <li>We're sending ~${X} proposals/month at ~${formatCurrency(Y)} each.</li>
-  <li>We're closing roughly ${Z}%, which leaves ${dealsDying.toFixed(0)} deals/month dying after proposal.</li>
-  <li>Cash from "yes" lands ~${D} days later.</li>
-</ol>
+<p>So the only useful question is: what does the decision path actually look like internally?</p>
 
-<p>Elystra sits exactly on that sales rail:</p>
+<p>If this needs internal review, the cleanest next move is a short call with the relevant person and keep it strictly on:</p>
 <ul class="recap">
-  <li>Turns our proposals into tracked, interactive offers</li>
-  <li>Ties signatures + payment into the same flow</li>
-  <li>Shows precisely where deals die and who owes what, by when</li>
+  <li>the leakage</li>
+  <li>the Elystra Delta</li>
+  <li>the system live</li>
+  <li>and the activation path</li>
 </ul>
 
-<p>Conservatively, if Elystra only recovers 1–2 deals/month and pulls cash in 10 days faster, it pays for itself several times over.</p>
+<p>If there are any blockers? Let us know.</p>
 
-<p>If it helps, you can forward this straight to your partner or owner with something like:</p>
+<p>Reply with 2 slots if you want to do that.</p>
 
-<div class="numbers-box">
-  "We're leaking roughly ${formatCurrency(roi.annual_revenue_gap)}/year between proposals that die and slow collections. Elystra plugs that rail. I'd like to run our next proposal through it and see impact on one deal."
-</div>
-
-<p>To make it real on your side, here's your agency-plan Elystra link:</p>
-<p><a href="${agencyLink}" class="cta">Create One Live Proposal</a></p>
-<p style="font-size: 13px; color: #666;">— lets you create one live proposal on your current pipeline so you can feel the system instead of imagining it.</p>
-
-<p>If you want us on the internal call with your partner or owner, send me two time options this week when you're both available and we'll do a 20-minute, numbers-only review.</p>
-
-<p>-- David, Elystra</p>
+<p>— David, Elystra</p>
       `),
       text: `Hey ${name},
 
-If you want to loop in your internal team, here's the clean version of the story for them:
+You have the Revenue Infrastructure Assessment on your side now.
 
-1. We're sending ~${X} proposals/month at ~${formatCurrency(Y)} each.
-2. We're closing roughly ${Z}%, which leaves ${dealsDying.toFixed(0)} deals/month dying after proposal.
-3. Cash from "yes" lands ~${D} days later.
+So the only useful question is: what does the decision path actually look like internally?
 
-Elystra sits exactly on that sales rail:
-- Turns our proposals into tracked, interactive offers
-- Ties signatures + payment into the same flow
-- Shows precisely where deals die and who owes what, by when
+If this needs internal review, the cleanest next move is a short call with the relevant person and keep it strictly on:
+- the leakage
+- the Elystra Delta
+- the system live
+- and the activation path
 
+If there are any blockers? Let us know.
 
-If it helps, you can forward this straight to your partner or owner with something like:
+Reply with 2 slots if you want to do that.
 
-
-To make it real on your side, here's your agency-plan Elystra link:
-${agencyLink}
-— lets you create one live proposal on your current pipeline so you can feel the system instead of imagining it. if you need us to provide  a Demo Recoded Video, let us know. 
-
-If you want us on the internal call with your partner or owner, send me two time options this week when you're both available and we'll do a 20-minute, numbers-only review.
-
--- David, Elystra`,
+— David, Elystra`,
     };
   }
 
   /**
-   * Touch 3 (Day 5): Policy decision — infrastructure choice, not "checking in"
+   * Touch 2 (Day 6): Policy decision — underlying math unchanged, 170-agency Delta
    */
   static directAsk(prospect: Prospect): EmailTemplate {
     const name = firstName(prospect);
-    const roi = calculateROI(prospect);
-    const X = prospect.proposals_per_month;
-    const Y = prospect.avg_deal_size;
-    const Z = prospect.close_rate;
-    const D = prospect.time_to_cash_days;
-    const monthlyDeltaOneDeal = Y;
-    const monthlyDeltaTwoDeals = 2 * Y;
+    const agencyName = prospect.agency_name;
+    const pricingLink = prospect.pricing_page_url?.trim() || 'https://app.elystra.online/pricing';
 
     return {
-      subject: `This is now a policy decision, not a software question`,
+      subject: `The math hasn't changed, ${name}`,
       html: wrapHtml(`
 <p>Hey ${name},</p>
 
-<p>Let's remove the fog and talk in the only language that matters: your numbers.</p>
+<p>Since we spoke, the underlying math has not changed.</p>
 
-<p>From your own inputs:</p>
+<p>The same leakage is still sitting in the gap between buyer intent and collected cash.</p>
+
+<p>That is the only decision in front of you now:</p>
 <ul class="recap">
-  <li>Proposals/month: ~${X}</li>
-  <li>Avg deal size: ~${formatCurrency(Y)}</li>
-  <li>Close rate after proposal: ~${Z}%</li>
-  <li>Time from "yes" → cash: ~${D} days</li>
+  <li>install infrastructure to tighten that rail</li>
+  <li>or keep the current process and accept the leak as part of how the agency operates</li>
 </ul>
 
-<p>That translates into:</p>
-<ul class="recap">
-  <li>≈ ${formatCurrency(roi.monthly_revenue_gap)}/month leaking after proposals go out</li>
-  <li>≈ ${formatCurrency(roi.annual_revenue_gap)}/year in deals that should be cash but die in follow-up, signatures and payment friction</li>
-</ul>
+<h3>Here's what 170 agencies saw after installing the rail:</h3>
 
-<p>That's not my math. That is your pipeline, with your numbers, made visible.</p>
+<table class="delta">
+  <tr><th>Metric</th><th>Before</th><th>After</th><th>Delta</th></tr>
+  <tr><td>Proposal → Paid close rate</td><td>31%</td><td>49%</td><td>+18 pts</td></tr>
+  <tr><td>Deals closed/month</td><td>6.2</td><td>9.8</td><td>+3.6</td></tr>
+  <tr><td>Days "yes" → cash</td><td>30</td><td>15</td><td>-15 days</td></tr>
+  <tr><td>ROI on Elystra fee</td><td>—</td><td>9–14×</td><td>Month 1</td></tr>
+</table>
+
+<p>That's the median. Not best-case.</p>
 
 <hr class="sep">
 
-<h3>What Elystra actually does in that context</h3>
+<h3>This is now a policy decision:</h3>
 
-<p>You saw it live:</p>
-<ul class="recap">
-  <li>Same proposals you send today — same structure, same pricing logic, same narrative — but generated in minutes instead of hours, and run on a rail where:</li>
-  <li>Sign → Pay is one motion. No "we'll get this to finance", no invoices floating around for 30 days.</li>
-  <li>Behavior is tracked. You see who opened, who read pricing, where interest dies.</li>
-  <li>Follow-ups fire on behavior, not memory. Pricing viewed, not signed? Signed, not paid? Elystra pushes automatically.</li>
-</ul>
+<p>Either ${agencyName} installs infrastructure to capture the revenue it's already generating but failing to collect — or it accepts the current leak as a structural cost of doing business.</p>
 
-<p>Pessimistic outcome (not "best case", just physics):</p>
-<ul class="recap">
-  <li>+1–2 serious deals/month recovered from the same proposal volume</li>
-  <li>10–15 days faster from "yes" → cash collected</li>
-</ul>
+<p>Both are valid. Both are now conscious.</p>
 
-<p>At your ACV, that's:</p>
-<ul class="recap">
-  <li>≈ ${formatCurrency(monthlyDeltaOneDeal)}–${formatCurrency(monthlyDeltaTwoDeals)} extra per month</li>
-  <li>For a $1.5K/month rail.</li>
-</ul>
+<p>If you're ready to activate: <a href="${pricingLink}" class="cta">Activate your rail →</a><br>
+We configure in 1–3 days. First live deal runs through Elystra this week.</p>
 
-<p>If we're wrong, you have the 30-day guarantee. You walk, you keep your current leaks.<br>
-If we're right, you're effectively paying $1.5K to unlock ${formatCurrency(monthlyDeltaOneDeal)}–${formatCurrency(monthlyDeltaTwoDeals)} every month going forward.</p>
+<p>If timing is wrong, give me a date and I'll follow up then.<br>
+Otherwise, I'll send one final note and close your file.</p>
 
-<hr class="sep">
-
-<h3>This is the actual decision in front of you</h3>
-
-<p>It's not "Do we like Elystra?"<br>
-It's:</p>
-
-<p><strong>Do we accept leaking ${formatCurrency(roi.monthly_revenue_gap)}/month, ${formatCurrency(roi.annual_revenue_gap)}/year as a structural fact of how we sell, or do we wire a dedicated rail to stop it?</strong></p>
-
-<p>Both are valid choices. But they are conscious choices now, not accidental.</p>
-
-<p><strong>We need a clear stance</strong></p>
-<ul class="recap">
-  <li><strong>Reply YES</strong> → We configure Elystra around how you sell (proposal structure, pricing logic, payment methods, roles/permissions) and run your next live proposals through it this week.</li>
-  <li><strong>Reply NO</strong> → We close your file on our side and reallocate the slot to teams who are ready to tighten their rail now.</li>
-</ul>
-
-<p>You've seen the system. You've seen the math.<br>
-Now it's simply: run your deals through Elystra and stop the bleed, or keep your current rail and accept the leak.</p>
-
-<p>-- David<br>
-Founder, Elystra</p>
+<p>— David, Elystra</p>
       `),
       text: `Hey ${name},
 
-Let's remove the fog and talk in the only language that matters: your numbers.
+Since we spoke, the underlying math has not changed.
 
-From your own inputs:
-- Proposals/month: ~${X}
-- Avg deal size: ~${formatCurrency(Y)}
-- Close rate after proposal: ~${Z}%
-- Time from "yes" → cash: ~${D} days
+The same leakage is still sitting in the gap between buyer intent and collected cash.
 
-That translates into:
-- ≈ ${formatCurrency(roi.monthly_revenue_gap)}/month leaking after proposals go out
-- ≈ ${formatCurrency(roi.annual_revenue_gap)}/year in deals that should be cash but die in follow-up, signatures and payment friction
+That is the only decision in front of you now:
+• install infrastructure to tighten that rail
+• or keep the current process and accept the leak as part of how the agency operates
 
-That's not my math. That is your pipeline, with your numbers, made visible.
+Here's what 170 agencies saw after installing the rail:
 
-What Elystra actually does: Same proposals, same structure — but Sign→Pay in one motion, behavior tracked, follow-ups on behavior. Pessimistic: +1-2 deals/month, 10-15 days faster. At your ACV: ≈ ${formatCurrency(monthlyDeltaOneDeal)}–${formatCurrency(monthlyDeltaTwoDeals)} extra/month for $1.5K. 30-day guarantee if we're wrong.
+Metric | Before | After | Delta
+Proposal → Paid close rate | 31% | 49% | +18 pts
+Deals closed/month | 6.2 | 9.8 | +3.6
+Days "yes" → cash | 30 | 15 | -15 days
+ROI on Elystra fee | — | 9–14× | Month 1
 
-This is the actual decision: Do we accept leaking ${formatCurrency(roi.monthly_revenue_gap)}/month as structural fact, or wire a rail to stop it? Both valid. Both conscious now.
+That's the median. Not best-case.
 
-We need a clear stance:
-- Reply YES → We configure Elystra and run your next live proposals through it this week.
-- Reply NO → We close your file on our side and reallocate the slot.
+This is now a policy decision:
 
-You've seen the system. You've seen the math. Run deals through Elystra and stop the bleed, or keep your current rail and accept the leak.
+Either ${agencyName} installs infrastructure to capture the revenue it's already generating but failing to collect — or it accepts the current leak as a structural cost of doing business.
 
--- David, Founder, Elystra`,
+Both are valid. Both are now conscious.
+
+If you're ready to activate: ${pricingLink}
+We configure in 1–3 days. First live deal runs through Elystra this week.
+
+If timing is wrong, give me a date and I'll follow up then.
+Otherwise, I'll send one final note and close your file.
+
+— David, Elystra`,
     };
   }
 
   /**
-   * Touch 4 (Day 10): Close the file on our side for this quarter
+   * Touch 3 (Day 10): Close the file — finality, 48h window
    */
   static closingFile(prospect: Prospect): EmailTemplate {
     const name = firstName(prospect);
-    const roi = calculateROI(prospect);
+    const pricingLink = prospect.pricing_page_url?.trim() || 'https://app.elystra.online/pricing';
 
     return {
-      subject: `Closing your file for this quarter, ${name}`,
+      subject: `Closing your file, ${name}`,
       html: wrapHtml(`
 <p>${name},</p>
 
-<p>We're closing your file on our side for this quarter.</p>
+<p>We are going to close the file on our side for now. The Infrastructure Assessment stands.</p>
 
-<p>The numbers haven't changed — <strong>${formatCurrency(roi.monthly_revenue_gap)}/month</strong> stays on the table. That's the math.</p>
+<p>The underlying issue itself has not changed, leaking through the same revenue rail.</p>
 
-<p>If you want to move forward in the next 48 hours, reply to this email. After that, we're closed on this for the quarter.</p>
+<p>If you want to activate before we close it fully, use the link below in the next 48 hours.</p>
 
-<p>No follow-up after this. I appreciate your time, ${name}.</p>
+<p><a href="${pricingLink}" class="cta">${pricingLink}</a></p>
 
-<p>-- David, Elystra</p>
+<p>If not, we leave it there cleanly.</p>
+
+<p>— David, Elystra</p>
       `),
       text: `${name},
 
-We're closing your file on our side for this quarter.
+We are going to close the file on our side for now. The Infrastructure Assessment stands.
 
-The numbers haven't changed — ${formatCurrency(roi.monthly_revenue_gap)}/month stays on the table. That's the math.
+The underlying issue itself has not changed, leaking through the same revenue rail.
 
-If you want to move forward in the next 48 hours, reply. After that, we're closed on this for the quarter.
+If you want to activate before we close it fully, use the link below in the next 48 hours.
 
-No follow-up after this. Appreciate your time.
+${pricingLink}
 
--- David, Elystra`,
+If not, we leave it there cleanly.
+
+— David, Elystra`,
     };
   }
 }

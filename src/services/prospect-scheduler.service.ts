@@ -1,11 +1,10 @@
 /**
  * Prospect Scheduler Service
- * 4-touch kill-or-close sequence in 10 days.
+ * 3-touch automated sequence. Touch 1 (recap + Infrastructure Assessment PDF) is manual.
  *
- * T+30min: PD_RECAP_ROI         — recap, Elystra delta, $1.5K, guarantee, reply "Go"
- * T+48h:   PD_STAKEHOLDER_BRIEF — internal politics, forward template, agency proposal link
- * T+5d:    PD_DIRECT_ASK        — binary: implement or close file
- * T+10d:   PD_CLOSING_FILE      — final: 48h or close
+ * Day 3:  PD_STAKEHOLDER_BRIEF — arm champion with forward-ready internal brief
+ * Day 6:  PD_DIRECT_ASK        — make clock hurt, policy decision, 170-agency Delta
+ * Day 10: PD_CLOSING_FILE     — close file, 48h final window
  */
 
 import { prospectDb } from '@/lib/prospect-db';
@@ -19,10 +18,9 @@ type SequenceStep = {
 };
 
 const POST_DEMO_SEQUENCE: SequenceStep[] = [
-  { messageType: 'PD_RECAP_ROI', delayMs: 30 * 60 * 1000 },   // T+30min
-  { messageType: 'PD_STAKEHOLDER_BRIEF', delayMs: 48 * HOUR }, // T+48h
-  { messageType: 'PD_DIRECT_ASK', delayMs: 5 * 24 * HOUR },     // T+5d
-  { messageType: 'PD_CLOSING_FILE', delayMs: 10 * 24 * HOUR },  // T+10d
+  { messageType: 'PD_STAKEHOLDER_BRIEF', delayMs: 72 * HOUR },   // Day 3
+  { messageType: 'PD_DIRECT_ASK', delayMs: 144 * HOUR },          // Day 6
+  { messageType: 'PD_CLOSING_FILE', delayMs: 240 * HOUR },       // Day 10
 ];
 
 export class ProspectSchedulerService {
