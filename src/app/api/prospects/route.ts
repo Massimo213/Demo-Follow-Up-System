@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       notes: parsed.notes || null,
       demo_date: parsed.demo_date,
       status: 'ACTIVE',
-      pricing_page_url: parsed.pricing_page_url || process.env.PRICING_PAGE_URL || 'https://elystra.com/pricing',
+      pricing_page_url: parsed.pricing_page_url || process.env.PRICING_PAGE_URL || 'https://app.elystra.online/pricing',
       agency_proposal_link: parsed.agency_proposal_link ?? null,
       assessment_link: parsed.assessment_link ?? null,
       workspace_link: parsed.workspace_link ?? null,
