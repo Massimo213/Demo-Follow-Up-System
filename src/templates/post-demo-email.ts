@@ -74,6 +74,7 @@ export class PostDemoEmailTemplates {
       PD_STAKEHOLDER_BRIEF: () => this.internalPolitics(prospect),
       PD_DIRECT_ASK: () => this.directAsk(prospect),
       PD_CLOSING_FILE: () => this.closingFile(prospect),
+      PD_INTERNAL_CALL_REMINDER: () => this.internalCallReminder(prospect),
     };
 
     const templateFn = templates[messageType];
@@ -300,7 +301,7 @@ You've now had the Revenue Infrastructure Assessment and the private Elystra eva
 
 At this point, if things have still not moved, then there is likely a blocker on your side, whether that is internal review, timing, implementation concern, pricing, or something else.
 
-If there is one, say it directly.
+If there is one, inform us directly.
 We would rather understand the real blocker than let the decision sit in silence.
 
 The reason we sent both the assessment and the workspace is simple:
@@ -356,6 +357,48 @@ If you want to activate before we close it fully, use the link below in the next
 ${pricingLink}
 
 If not, we leave it there cleanly.
+
+David from Elystra`,
+    };
+  }
+
+  /**
+   * Day 2: Internal reminder to call the prospect.
+   */
+  static internalCallReminder(prospect: Prospect): EmailTemplate {
+    const name = firstName(prospect);
+    const phone = prospect.phone?.trim() || 'No phone on file';
+
+    return {
+      subject: `Call today, ${prospect.agency_name}, ${name}`,
+      html: wrapHtml(`
+<p>Call reminder for today.</p>
+
+<p>This prospect is at the Day 2 founder call step.</p>
+
+<p>
+- Who: ${prospect.name}<br>
+- Agency: ${prospect.agency_name}<br>
+- Phone: ${phone}<br>
+- Email: ${prospect.email}<br>
+- Demo date: ${prospect.demo_date}
+</p>
+
+<p>Action: call the prospect today. If they do not answer, leave a short voicemail, then the missed-call SMS will handle the follow-up.</p>
+
+<p>David from Elystra</p>
+      `),
+      text: `Call reminder for today.
+
+This prospect is at the Day 2 founder call step.
+
+- Who: ${prospect.name}
+- Agency: ${prospect.agency_name}
+- Phone: ${phone}
+- Email: ${prospect.email}
+- Demo date: ${prospect.demo_date}
+
+Action: call the prospect today. If they do not answer, leave a short voicemail, then the missed-call SMS will handle the follow-up.
 
 David from Elystra`,
     };

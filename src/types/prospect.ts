@@ -20,7 +20,8 @@ export type ProspectMessageType =
   | 'PD_CLOSING_FILE'
   | 'PD_SMS_ASSESSMENT_WORKSPACE'
   | 'PD_SMS_MISSED_CALL'
-  | 'PD_SMS_DECISION';
+  | 'PD_SMS_DECISION'
+  | 'PD_INTERNAL_CALL_REMINDER';
 
 export interface Prospect {
   id: string;

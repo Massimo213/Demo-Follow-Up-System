@@ -38,6 +38,12 @@ const SMS_TYPES: ProspectMessageType[] = [
   'PD_SMS_DECISION',
 ];
 
+const INTERNAL_EMAIL_TYPES: ProspectMessageType[] = [
+  'PD_INTERNAL_CALL_REMINDER',
+];
+
+const INTERNAL_TEAM_EMAIL = process.env.ELYSTRA_TEAM_EMAIL || 'elystrateam@gmail.com';
+
 export class ProspectMessagingService {
   static async sendMessage(
     prospect: Prospect,
@@ -69,27 +75,30 @@ export class ProspectMessagingService {
     if (!gmailUser) throw new Error('GMAIL_USER not configured');
     const fromName = 'David from Elystra';
     const from = `"${fromName}" <${gmailUser}>`;
+    const recipient = INTERNAL_EMAIL_TYPES.includes(messageType)
+      ? INTERNAL_TEAM_EMAIL
+      : prospect.email;
 
     const transporter = getGmailTransporter();
 
     try {
       const info = await transporter.sendMail({
         from,
-        to: prospect.email,
+        to: recipient,
         subject: template.subject,
         html: template.html,
         text: template.text,
         replyTo: gmailUser,
       });
 
-      console.log(`[PROSPECT-MSG] Email ${messageType} sent to ${prospect.email}, id: ${info.messageId}`);
+      console.log(`[PROSPECT-MSG] Email ${messageType} sent to ${recipient}, id: ${info.messageId}`);
 
       try {
         return await prospectDb.messages.insert({
           prospect_id: prospect.id,
           channel: 'EMAIL',
           message_type: messageType,
-          recipient: prospect.email,
+          recipient,
           subject: template.subject,
           body: template.text,
           external_id: info.messageId || null,
