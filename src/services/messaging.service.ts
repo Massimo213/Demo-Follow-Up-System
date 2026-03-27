@@ -109,7 +109,7 @@ export class MessagingService {
     if (!gmailUser) throw new Error('GMAIL_USER not configured');
 
     // Display name for "From" field
-    const fromName = process.env.GMAIL_FROM_NAME || 'David from Elystra';
+    const fromName = 'David from Elystra';
     const from = `"${fromName}" <${gmailUser}>`;
 
     const transporter = getGmailTransporter();

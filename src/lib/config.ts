@@ -32,7 +32,7 @@ export const config = {
     return {
       user: getEnv('GMAIL_USER'),
       appPassword: getEnv('GMAIL_APP_PASSWORD'),
-      fromName: process.env.GMAIL_FROM_NAME || 'Yahya from Elystra',
+      fromName: 'David from Elystra',
     };
   },
 

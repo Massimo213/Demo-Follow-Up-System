@@ -67,7 +67,7 @@ export class ProspectMessagingService {
 
     const gmailUser = process.env.GMAIL_USER;
     if (!gmailUser) throw new Error('GMAIL_USER not configured');
-    const fromName = process.env.GMAIL_FROM_NAME || 'David from Elystra';
+    const fromName = 'David from Elystra';
     const from = `"${fromName}" <${gmailUser}>`;
 
     const transporter = getGmailTransporter();

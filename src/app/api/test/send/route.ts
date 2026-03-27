@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       auth: { user: gmailUser, pass: gmailPass },
     });
 
-    const fromName = process.env.GMAIL_FROM_NAME || 'Yahya from Elystra';
+    const fromName = 'David from Elystra';
     const from = `"${fromName}" <${gmailUser}>`;
 
     const info = await transporter.sendMail({

@@ -195,13 +195,13 @@ If the assessment is directionally right on your side, the next step is simple: 
 
     const assessmentHtml = assessment
       ? `<a href="${assessment}">${assessment}</a>`
-      : `<span class="muted">(same links as in your Day 0 email — reply if you need them resent)</span>`;
+      : `<span class="muted">(same link as in your Day 0 email, reply if you need it resent)</span>`;
     const workspaceHtml = workspace
       ? `<a href="${workspace}">${workspace}</a>`
-      : `<span class="muted">(same links as in your Day 0 email — reply if you need them resent)</span>`;
+      : `<span class="muted">(same link as in your Day 0 email, reply if you need it resent)</span>`;
 
-    const assessmentText = assessment || '(same link as Day 0 — reply if you need it resent)';
-    const workspaceText = workspace || '(same link as Day 0 — reply if you need it resent)';
+    const assessmentText = assessment || '(same link as Day 0, reply if you need it resent)';
+    const workspaceText = workspace || '(same link as Day 0, reply if you need it resent)';
 
     return {
       subject: `Internal decision path`,
@@ -221,16 +221,16 @@ The workspace gives you the live proof.</p>
 <p>If there is anything we have not answered clearly yet, send it over and we will address it directly.</p>
 
 <p>If another person needs to review this with you, let us know as soon as possible and we can keep the next call focused on:</p>
-<ul class="recap">
-  <li>where the current rail is leaking</li>
-  <li>what Elystra changes operationally</li>
-  <li>what the delta looks like once the rail is installed properly</li>
-  <li>and what activation would look like on your side</li>
-</ul>
+<p>
+- where the current rail is leaking<br>
+- what Elystra changes operationally<br>
+- what the delta looks like once the rail is installed properly<br>
+- and what activation would look like on your side
+</p>
 
 <p>If something else is holding movement up, make that clear as well so we can both attack it correctly.</p>
 
-<p>Massimo</p>
+<p>David from Elystra</p>
       `),
       text: `Hi ${name},
 
@@ -254,7 +254,7 @@ If another person needs to review this with you, let us know as soon as possible
 
 If something else is holding movement up, make that clear as well so we can both attack it correctly.
 
-Massimo`,
+David from Elystra`,
     };
   }
 
@@ -271,17 +271,17 @@ Massimo`,
 
 <p>You've now had the Revenue Infrastructure Assessment and the private Elystra evaluation workspace on your side for a few days.</p>
 
-<p>At this point, if things have still not moved, then there is likely a blocker on your side — whether that is internal review, timing, implementation concern, pricing, or something else.</p>
+<p>At this point, if things have still not moved, then there is likely a blocker on your side, whether that is internal review, timing, implementation concern, pricing, or something else.</p>
 
 <p>If there is one, say it directly.<br>
 We would rather understand the real blocker than let the decision sit in silence.</p>
 
 <p>The reason we sent both the assessment and the workspace is simple:</p>
-<ul class="recap">
-  <li>the assessment shows the business case</li>
-  <li>the workspace shows the rail in context</li>
-  <li>together, they are meant to make the decision clearer, not heavier</li>
-</ul>
+<p>
+- the assessment shows the business case<br>
+- the workspace shows the rail in context<br>
+- together, they are meant to make the decision clearer, not heavier
+</p>
 
 <p>For agencies like yours, the objective is not abstract. The usual win is straightforward: get more of the existing pipeline to turn into paid revenue, get proposals moving before momentum dies, stop letting competitors slip back into the gap, and create enough control over the sales motion that one or two additional deals in the first month becomes realistic.</p>
 
@@ -292,13 +292,13 @@ We would rather understand the real blocker than let the decision sit in silence
 <p>reply with the blocker, or send two times that work for a short follow-up review and we'll keep it focused.</p>
 
 <p>Best,<br>
-Massimo</p>
+David from Elystra</p>
       `),
       text: `Hi ${name},
 
 You've now had the Revenue Infrastructure Assessment and the private Elystra evaluation workspace on your side for a few days.
 
-At this point, if things have still not moved, then there is likely a blocker on your side — whether that is internal review, timing, implementation concern, pricing, or something else.
+At this point, if things have still not moved, then there is likely a blocker on your side, whether that is internal review, timing, implementation concern, pricing, or something else.
 
 If there is one, say it directly.
 We would rather understand the real blocker than let the decision sit in silence.
@@ -317,7 +317,7 @@ So the cleanest next step is this:
 reply with the blocker, or send two times that work for a short follow-up review and we'll keep it focused.
 
 Best,
-Massimo`,
+David from Elystra`,
     };
   }
 
@@ -343,7 +343,7 @@ Massimo`,
 
 <p>If not, we leave it there cleanly.</p>
 
-<p>— David, Elystra</p>
+<p>David from Elystra</p>
       `),
       text: `${name},
 
@@ -357,7 +357,7 @@ ${pricingLink}
 
 If not, we leave it there cleanly.
 
-— David, Elystra`,
+David from Elystra`,
     };
   }
 }
