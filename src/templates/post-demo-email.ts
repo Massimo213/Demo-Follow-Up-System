@@ -51,6 +51,19 @@ function firstName(prospect: Prospect): string {
   return prospect.name.split(' ')[0];
 }
 
+/** Day 1 email: per-prospect links, else Vercel env defaults */
+function assessmentWorkspaceLinks(prospect: Prospect): { assessment: string; workspace: string } {
+  const assessment =
+    prospect.assessment_link?.trim() ||
+    process.env.ELYSTRA_DEFAULT_ASSESSMENT_LINK?.trim() ||
+    '';
+  const workspace =
+    prospect.workspace_link?.trim() ||
+    process.env.ELYSTRA_DEFAULT_WORKSPACE_LINK?.trim() ||
+    '';
+  return { assessment, workspace };
+}
+
 export class PostDemoEmailTemplates {
   static getTemplate(
     messageType: ProspectMessageType,
@@ -174,138 +187,137 @@ If the assessment is directionally right on your side, the next step is simple: 
   }
 
   /**
-   * Touch 1 (Day 3): Decision path — they have the Assessment, what's next?
+   * Day 1: Internal decision path — assessment + workspace links
    */
   static internalPolitics(prospect: Prospect): EmailTemplate {
     const name = firstName(prospect);
+    const { assessment, workspace } = assessmentWorkspaceLinks(prospect);
+
+    const assessmentHtml = assessment
+      ? `<a href="${assessment}">${assessment}</a>`
+      : `<span class="muted">(same links as in your Day 0 email — reply if you need them resent)</span>`;
+    const workspaceHtml = workspace
+      ? `<a href="${workspace}">${workspace}</a>`
+      : `<span class="muted">(same links as in your Day 0 email — reply if you need them resent)</span>`;
+
+    const assessmentText = assessment || '(same link as Day 0 — reply if you need it resent)';
+    const workspaceText = workspace || '(same link as Day 0 — reply if you need it resent)';
 
     return {
-      subject: `Decision path, ${name}`,
+      subject: `Internal decision path`,
       html: wrapHtml(`
-<p>Hey ${name},</p>
+<p>Hi ${name},</p>
 
-<p>You have the Revenue Infrastructure Assessment on your side now.</p>
+<p>You now have both pieces on your side:</p>
 
-<p>So the only useful question is: what does the decision path actually look like internally?</p>
+<p><strong>Revenue Infrastructure Assessment:</strong> ${assessmentHtml}<br>
+<strong>Private Elystra Evaluation Workspace:</strong> ${workspaceHtml}</p>
 
-<p>If this needs internal review, the cleanest next move is a short call with the relevant person and keep it strictly on:</p>
+<p>The assessment gives you the business case.<br>
+The workspace gives you the live proof.</p>
+
+<p>So the only useful question at this point is: what does the decision path actually look like on your side?</p>
+
+<p>If there is anything we have not answered clearly yet, send it over and we will address it directly.</p>
+
+<p>If another person needs to review this with you, let us know as soon as possible and we can keep the next call focused on:</p>
 <ul class="recap">
-  <li>the leakage</li>
-  <li>the Elystra Delta</li>
-  <li>the system live</li>
-  <li>and the activation path</li>
+  <li>where the current rail is leaking</li>
+  <li>what Elystra changes operationally</li>
+  <li>what the delta looks like once the rail is installed properly</li>
+  <li>and what activation would look like on your side</li>
 </ul>
 
-<p>If there are any blockers? Let us know.</p>
+<p>If something else is holding movement up, make that clear as well so we can both attack it correctly.</p>
 
-<p>Reply with 2 slots if you want to do that.</p>
-
-<p>— David, Elystra</p>
+<p>Massimo</p>
       `),
-      text: `Hey ${name},
+      text: `Hi ${name},
 
-You have the Revenue Infrastructure Assessment on your side now.
+You now have both pieces on your side:
 
-So the only useful question is: what does the decision path actually look like internally?
+Revenue Infrastructure Assessment: ${assessmentText}
+Private Elystra Evaluation Workspace: ${workspaceText}
 
-If this needs internal review, the cleanest next move is a short call with the relevant person and keep it strictly on:
-- the leakage
-- the Elystra Delta
-- the system live
-- and the activation path
+The assessment gives you the business case.
+The workspace gives you the live proof.
 
-If there are any blockers? Let us know.
+So the only useful question at this point is: what does the decision path actually look like on your side?
 
-Reply with 2 slots if you want to do that.
+If there is anything we have not answered clearly yet, send it over and we will address it directly.
 
-— David, Elystra`,
+If another person needs to review this with you, let us know as soon as possible and we can keep the next call focused on:
+- where the current rail is leaking
+- what Elystra changes operationally
+- what the delta looks like once the rail is installed properly
+- and what activation would look like on your side
+
+If something else is holding movement up, make that clear as well so we can both attack it correctly.
+
+Massimo`,
     };
   }
 
   /**
-   * Touch 2 (Day 6): Policy decision — underlying math unchanged, 170-agency Delta
+   * Touch (Day 3): Blocker-extraction compression
    */
   static directAsk(prospect: Prospect): EmailTemplate {
     const name = firstName(prospect);
-    const agencyName = prospect.agency_name;
-    const pricingLink = prospect.pricing_page_url?.trim() || 'https://app.elystra.online/pricing';
 
     return {
-      subject: `The math hasn't changed, ${name}`,
+      subject: `What is the blocker on your side?`,
       html: wrapHtml(`
-<p>Hey ${name},</p>
+<p>Hi ${name},</p>
 
-<p>Since we spoke, the underlying math has not changed.</p>
+<p>You've now had the Revenue Infrastructure Assessment and the private Elystra evaluation workspace on your side for a few days.</p>
 
-<p>The same leakage is still sitting in the gap between buyer intent and collected cash.</p>
+<p>At this point, if things have still not moved, then there is likely a blocker on your side — whether that is internal review, timing, implementation concern, pricing, or something else.</p>
 
-<p>That is the only decision in front of you now:</p>
+<p>If there is one, say it directly.<br>
+We would rather understand the real blocker than let the decision sit in silence.</p>
+
+<p>The reason we sent both the assessment and the workspace is simple:</p>
 <ul class="recap">
-  <li>install infrastructure to tighten that rail</li>
-  <li>or keep the current process and accept the leak as part of how the agency operates</li>
+  <li>the assessment shows the business case</li>
+  <li>the workspace shows the rail in context</li>
+  <li>together, they are meant to make the decision clearer, not heavier</li>
 </ul>
 
-<h3>Here's what 170 agencies saw after installing the rail:</h3>
+<p>For agencies like yours, the objective is not abstract. The usual win is straightforward: get more of the existing pipeline to turn into paid revenue, get proposals moving before momentum dies, stop letting competitors slip back into the gap, and create enough control over the sales motion that one or two additional deals in the first month becomes realistic.</p>
 
-<table class="delta">
-  <tr><th>Metric</th><th>Before</th><th>After</th><th>Delta</th></tr>
-  <tr><td>Proposal → Paid close rate</td><td>31%</td><td>49%</td><td>+18 pts</td></tr>
-  <tr><td>Deals closed/month</td><td>6.2</td><td>9.8</td><td>+3.6</td></tr>
-  <tr><td>Days "yes" → cash</td><td>30</td><td>15</td><td>-15 days</td></tr>
-  <tr><td>ROI on Elystra fee</td><td>—</td><td>9–14×</td><td>Month 1</td></tr>
-</table>
+<p>That is the delta we are trying to create.</p>
 
-<p>That's the median. Not best-case.</p>
+<p>So the cleanest next step is this:</p>
 
-<hr class="sep">
+<p>reply with the blocker, or send two times that work for a short follow-up review and we'll keep it focused.</p>
 
-<h3>This is now a policy decision:</h3>
-
-<p>Either ${agencyName} installs infrastructure to capture the revenue it's already generating but failing to collect — or it accepts the current leak as a structural cost of doing business.</p>
-
-<p>Both are valid. Both are now conscious.</p>
-
-<p>If you're ready to activate: <a href="${pricingLink}" class="cta">Activate your rail →</a><br>
-We configure in 1–3 days. First live deal runs through Elystra this week.</p>
-
-<p>If timing is wrong, give me a date and I'll follow up then.<br>
-Otherwise, I'll send one final note and close your file.</p>
-
-<p>— David, Elystra</p>
+<p>Best,<br>
+Massimo</p>
       `),
-      text: `Hey ${name},
+      text: `Hi ${name},
 
-Since we spoke, the underlying math has not changed.
+You've now had the Revenue Infrastructure Assessment and the private Elystra evaluation workspace on your side for a few days.
 
-The same leakage is still sitting in the gap between buyer intent and collected cash.
+At this point, if things have still not moved, then there is likely a blocker on your side — whether that is internal review, timing, implementation concern, pricing, or something else.
 
-That is the only decision in front of you now:
-• install infrastructure to tighten that rail
-• or keep the current process and accept the leak as part of how the agency operates
+If there is one, say it directly.
+We would rather understand the real blocker than let the decision sit in silence.
 
-Here's what 170 agencies saw after installing the rail:
+The reason we sent both the assessment and the workspace is simple:
+- the assessment shows the business case
+- the workspace shows the rail in context
+- together, they are meant to make the decision clearer, not heavier
 
-Metric | Before | After | Delta
-Proposal → Paid close rate | 31% | 49% | +18 pts
-Deals closed/month | 6.2 | 9.8 | +3.6
-Days "yes" → cash | 30 | 15 | -15 days
-ROI on Elystra fee | — | 9–14× | Month 1
+For agencies like yours, the objective is not abstract. The usual win is straightforward: get more of the existing pipeline to turn into paid revenue, get proposals moving before momentum dies, stop letting competitors slip back into the gap, and create enough control over the sales motion that one or two additional deals in the first month becomes realistic.
 
-That's the median. Not best-case.
+That is the delta we are trying to create.
 
-This is now a policy decision:
+So the cleanest next step is this:
 
-Either ${agencyName} installs infrastructure to capture the revenue it's already generating but failing to collect — or it accepts the current leak as a structural cost of doing business.
+reply with the blocker, or send two times that work for a short follow-up review and we'll keep it focused.
 
-Both are valid. Both are now conscious.
-
-If you're ready to activate: ${pricingLink}
-We configure in 1–3 days. First live deal runs through Elystra this week.
-
-If timing is wrong, give me a date and I'll follow up then.
-Otherwise, I'll send one final note and close your file.
-
-— David, Elystra`,
+Best,
+Massimo`,
     };
   }
 

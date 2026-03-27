@@ -48,6 +48,14 @@ const CreateProspectSchema = z.object({
     .union([z.string().url(), z.literal(''), z.null(), z.undefined()])
     .optional()
     .transform((v) => (!v || (typeof v === 'string' && !v.trim()) ? null : v)),
+  assessment_link: z
+    .union([z.string().url(), z.literal(''), z.null(), z.undefined()])
+    .optional()
+    .transform((v) => (!v || (typeof v === 'string' && !v.trim()) ? null : v)),
+  workspace_link: z
+    .union([z.string().url(), z.literal(''), z.null(), z.undefined()])
+    .optional()
+    .transform((v) => (!v || (typeof v === 'string' && !v.trim()) ? null : v)),
 });
 
 export async function POST(req: NextRequest) {
@@ -78,6 +86,8 @@ export async function POST(req: NextRequest) {
       status: 'ACTIVE',
       pricing_page_url: parsed.pricing_page_url || process.env.PRICING_PAGE_URL || 'https://elystra.com/pricing',
       agency_proposal_link: parsed.agency_proposal_link ?? null,
+      assessment_link: parsed.assessment_link ?? null,
+      workspace_link: parsed.workspace_link ?? null,
     });
 
     await ProspectSchedulerService.scheduleSequence(prospect);

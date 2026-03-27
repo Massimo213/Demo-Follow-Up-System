@@ -43,6 +43,8 @@ interface ProspectInsert {
   status: string;
   pricing_page_url: string;
   agency_proposal_link: string | null;
+  assessment_link: string | null;
+  workspace_link: string | null;
 }
 
 interface ProspectJobInsert {

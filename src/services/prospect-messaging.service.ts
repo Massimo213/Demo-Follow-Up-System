@@ -32,7 +32,11 @@ function getTwilio(): Twilio.Twilio {
   return _twilio;
 }
 
-const SMS_TYPES: ProspectMessageType[] = [];
+const SMS_TYPES: ProspectMessageType[] = [
+  'PD_SMS_ASSESSMENT_WORKSPACE',
+  'PD_SMS_MISSED_CALL',
+  'PD_SMS_DECISION',
+];
 
 export class ProspectMessagingService {
   static async sendMessage(

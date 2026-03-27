@@ -32,6 +32,8 @@ interface FormData {
   phone: string;
   notes: string;
   agency_proposal_link: string;
+  assessment_link: string;
+  workspace_link: string;
 }
 
 const BLANK: FormData = {
@@ -47,6 +49,8 @@ const BLANK: FormData = {
   phone: '',
   notes: '',
   agency_proposal_link: '',
+  assessment_link: '',
+  workspace_link: '',
 };
 
 const OBJECTIONS = [
@@ -118,6 +122,8 @@ export default function PostDemoPage() {
           phone: form.phone.trim() || null,
           notes: form.notes.trim() || null,
           agency_proposal_link: form.agency_proposal_link.trim() || null,
+          assessment_link: form.assessment_link.trim() || null,
+          workspace_link: form.workspace_link.trim() || null,
         }),
       });
       const data = await res.json();
@@ -125,7 +131,7 @@ export default function PostDemoPage() {
         setToast({ ok: false, text: data.details?.[0]?.message || data.error || 'Failed' });
         return;
       }
-      setToast({ ok: true, text: `${form.agency_name} added — 3 emails at Day 3, 6, 10` });
+      setToast({ ok: true, text: `${form.agency_name} added — 6-day touch sequence scheduled` });
       setForm(BLANK);
       loadProspects();
     } catch (err) {
@@ -157,7 +163,7 @@ export default function PostDemoPage() {
         <div style={{ marginBottom: 32 }}>
           <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: '#0066ff' }}>ELYSTRA</span>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: '4px 0 4px', color: '#111' }}>Post-Demo Prospects</h1>
-          <p style={{ fontSize: 14, color: '#666', margin: 0 }}>Add a prospect after the demo. 3 emails fire automatically (Day 3, 6, 10). Touch 1 is manual: send the Infrastructure Assessment PDF first.</p>
+          <p style={{ fontSize: 14, color: '#666', margin: 0 }}>Add a prospect after the demo. Automations run Day 0/1/2/3/4/6 (email + SMS). Founder calls remain manual (Day 2 mandatory, Day 5 conditional).</p>
         </div>
 
         {/* ─── Two-column: form left, active right ─── */}
@@ -196,6 +202,8 @@ export default function PostDemoPage() {
 
               <input style={inp} type="tel" placeholder="Phone (optional)" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
               <input style={inp} type="url" placeholder="Agency proposal link (optional)" value={form.agency_proposal_link} onChange={(e) => set('agency_proposal_link', e.target.value)} />
+              <input style={inp} type="url" placeholder="Assessment link — Day 1 email (optional)" value={form.assessment_link} onChange={(e) => set('assessment_link', e.target.value)} />
+              <input style={inp} type="url" placeholder="Evaluation workspace link — Day 1 email (optional)" value={form.workspace_link} onChange={(e) => set('workspace_link', e.target.value)} />
               <textarea style={{ ...inp, minHeight: 48, resize: 'vertical' as const }} placeholder="Notes (optional)" value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={2} />
 
               <button type="submit" disabled={loading} style={{ ...btn, opacity: loading ? 0.5 : 1 }}>

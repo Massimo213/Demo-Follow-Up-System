@@ -17,7 +17,10 @@ export type ProspectMessageType =
   | 'PD_RECAP_ROI'
   | 'PD_STAKEHOLDER_BRIEF'
   | 'PD_DIRECT_ASK'
-  | 'PD_CLOSING_FILE';
+  | 'PD_CLOSING_FILE'
+  | 'PD_SMS_ASSESSMENT_WORKSPACE'
+  | 'PD_SMS_MISSED_CALL'
+  | 'PD_SMS_DECISION';
 
 export interface Prospect {
   id: string;
@@ -35,6 +38,9 @@ export interface Prospect {
   status: ProspectStatus;
   pricing_page_url: string;
   agency_proposal_link: string | null;
+  /** Day 1 email; optional env fallbacks: ELYSTRA_DEFAULT_ASSESSMENT_LINK, ELYSTRA_DEFAULT_WORKSPACE_LINK */
+  assessment_link?: string | null;
+  workspace_link?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -95,4 +101,6 @@ export interface ProspectCreateInput {
   demo_date: string;
   pricing_page_url?: string;
   agency_proposal_link?: string | null;
+  assessment_link?: string | null;
+  workspace_link?: string | null;
 }
