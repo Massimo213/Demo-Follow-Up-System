@@ -10,7 +10,75 @@ import type { Demo, Reply } from '@/types/demo';
 
 type ParsedIntent = 'YES' | 'RESCHEDULE' | 'SOONER' | '1' | '2' | 'UNKNOWN';
 
+/** Inbound Twilio SMS → automation intents (full body scanned, not truncated). */
+export type SmsParsedIntent = 'YES' | 'STOP' | 'RESCHEDULE' | 'CLOSE' | 'CANCEL' | 'UNKNOWN';
+
 export class ReplyService {
+  /**
+   * Parse SMS reply intent using the entire message (any length).
+   * Order: STOP → short codes → keyword scans on full text.
+   */
+  static parseSmsIntent(body: string): SmsParsedIntent {
+    const raw = body.trim();
+    if (!raw) return 'UNKNOWN';
+    const lower = raw.toLowerCase();
+
+    if (/\b(stop|unsubscribe)\b/i.test(raw)) return 'STOP';
+
+    if (/^(yes|y|yep|yeah|yup)[.!\s]*$/i.test(lower)) return 'YES';
+    if (/^r[.!\s]*$/i.test(lower)) return 'RESCHEDULE';
+    if (/^a[.!\s]*$/i.test(lower)) return 'RESCHEDULE';
+    if (/^b[.!\s]*$/i.test(lower)) return 'CLOSE';
+
+    if (/^(yes|yep|yeah|yup|y|confirm|confirmed|i'?m in|count me in|see you|sounds good|perfect|great|ok|okay|good)[.!\s]*$/i.test(lower)) {
+      return 'YES';
+    }
+    if (
+      /\b(yes|confirm|confirmed|i'?m in|i'?ll be there|i'?m coming|see you then|sounds good|locked in|we are good|we'?re good|still on|good to go|absolutely|certainly)\b/i.test(
+        lower
+      )
+    ) {
+      return 'YES';
+    }
+
+    if (
+      /^(reschedule|cancel|can'?t|cannot|won'?t|unable|no|nope|n|change|move|different time|another time)$/i.test(lower)
+    ) {
+      return 'RESCHEDULE';
+    }
+    if (
+      /\b(reschedule|can'?t make|won'?t work|need to cancel|change the time|different time|another time|move it|push it|not available|have to move|need (a )?different|another slot|rebook|pick a new|new time|flexibility|postpone)\b/i.test(
+        lower
+      )
+    ) {
+      return 'RESCHEDULE';
+    }
+
+    if (
+      /\b(hope|please|asking|request).*\b(reschedule|different time|another time|move|change (the )?time|flexib(le|ility))\b/i.test(
+        lower
+      ) ||
+      /\b(reschedule|different time|another time)\b.*\b(hope|please|request|consideration)\b/i.test(lower) ||
+      /\bhope\b.*\bconsideration\b.*\b(request|given)\b/i.test(lower)
+    ) {
+      return 'RESCHEDULE';
+    }
+
+    if (
+      /^no$|^nope$|\b(can'?t make it|have to cancel|won'?t make it|cancel(ling)? (the |my |our )?(call|meeting|demo|slot))\b/i.test(
+        lower
+      )
+    ) {
+      return 'CANCEL';
+    }
+
+    if (/\b(close (the )?file|close my file|going with someone else|not interested anymore)\b/i.test(lower)) {
+      return 'CLOSE';
+    }
+
+    return 'UNKNOWN';
+  }
+
   /**
    * Parse intent from reply body
    */

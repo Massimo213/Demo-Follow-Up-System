@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Twilio from 'twilio';
+import { ReplyService } from '@/services/reply.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,9 +45,7 @@ async function notifyOwners(senderName: string, message: string, intent: string)
 
   try {
     const twilio = getTwilio();
-    const truncatedMessage = message.length > 100 ? message.slice(0, 100) + '...' : message;
-    
-    const notification = `📱 ${senderName} replied:\n"${truncatedMessage}"\n\n→ Intent: ${intent}`;
+    const notification = `📱 ${senderName} replied:\n"${message}"\n\n→ Intent: ${intent}`;
     
     // Send to all owner phones in parallel
     await Promise.all(
@@ -66,38 +65,6 @@ async function notifyOwners(senderName: string, message: string, intent: string)
     console.error('[SMS REPLY] Failed to notify owners:', error);
     // Don't throw - notification failure shouldn't break the webhook
   }
-}
-
-// Parse intent from message
-function parseIntent(body: string): string {
-  const lower = body.toLowerCase().trim();
-  
-  // YES confirmations
-  if (lower === 'yes' || lower === 'y' || lower === 'yep' || lower === 'yeah') {
-    return 'YES';
-  }
-  
-  // STOP/Cancel - they want out
-  if (lower === 'stop' || lower === 'unsubscribe') {
-    return 'STOP';
-  }
-  
-  // Reschedule - R, A, or explicit reschedule
-  if (lower === 'r' || lower === 'a' || lower.includes('reschedule') || lower.includes('different time') || lower.includes('another time')) {
-    return 'RESCHEDULE';
-  }
-  
-  // B = close file (from SMS_URGENT A/B choice)
-  if (lower === 'b' || lower === 'close') {
-    return 'CLOSE';
-  }
-  
-  // Cancel/can't make it
-  if (lower === 'no' || lower === 'nope' || lower.includes("can't make") || lower === 'cancel') {
-    return 'CANCEL';
-  }
-  
-  return 'UNKNOWN';
 }
 
 // Generate reschedule auto-reply
@@ -138,7 +105,7 @@ export async function POST(request: NextRequest) {
     const body = formData.get('Body') as string;
     const messageSid = formData.get('MessageSid') as string;
     
-    console.log(`[SMS REPLY] From: ${from}, Body: ${body}`);
+    console.log(`[SMS REPLY] From: ${from}, Body (${body.length} chars): ${body}`);
     
     if (!from || !body) {
       return new NextResponse('Missing from or body', { status: 400 });
@@ -158,7 +125,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .single();
 
-    const intent = parseIntent(body);
+    const intent = ReplyService.parseSmsIntent(body);
     
     // INVARIANT: sender_name must ALWAYS be present, never null
     // Priority: demo name > phone-derived fallback
