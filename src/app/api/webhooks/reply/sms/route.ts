@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Twilio from 'twilio';
 import { ReplyService } from '@/services/reply.service';
+import { MessagingService } from '@/services/messaging.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,8 @@ async function notifyOwners(senderName: string, message: string, intent: string)
 
   try {
     const twilio = getTwilio();
-    const notification = `📱 ${senderName} replied:\n"${message}"\n\n→ Intent: ${intent}`;
+    const n = message.length;
+    const notification = `📱 ${senderName} replied (${n} chars):\n"${message}"\n\n→ Intent: ${intent}`;
     
     // Send to all owner phones in parallel
     await Promise.all(
@@ -60,7 +62,9 @@ async function notifyOwners(senderName: string, message: string, intent: string)
       )
     );
     
-    console.log(`[SMS REPLY] Owners notified (${phoneNumbers.length} phones) about reply from ${senderName}`);
+    console.log(
+      `[SMS REPLY] Owners notified (${phoneNumbers.length} phones) about reply from ${senderName}, inbound ${message.length} chars`
+    );
   } catch (error) {
     console.error('[SMS REPLY] Failed to notify owners:', error);
     // Don't throw - notification failure shouldn't break the webhook
@@ -219,6 +223,16 @@ export async function POST(request: NextRequest) {
 
     // Notify owners on their personal phones about this reply
     await notifyOwners(senderName, body, intent);
+
+    if (process.env.ELYSTRA_INBOUND_SMS_NOTIFY_EMAIL === 'true') {
+      void MessagingService.sendInboundSmsTeamNotification({
+        fromPhoneE164: from,
+        body,
+        intent,
+        senderName,
+        messageSid: messageSid || undefined,
+      }).catch((e) => console.error('[SMS REPLY] Team inbox email failed:', e));
+    }
 
     // Return TwiML with auto-reply if needed
     if (autoReply) {

@@ -50,6 +50,21 @@ function getTwilio(): Twilio.Twilio {
   return _twilio;
 }
 
+/** NANP display: +13433129283 → "343 312-9283" */
+export function formatNanpPhoneDisplay(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  const last10 =
+    digits.length >= 11 && digits.startsWith('1')
+      ? digits.slice(-10)
+      : digits.length >= 10
+        ? digits.slice(-10)
+        : digits;
+  if (last10.length === 10) {
+    return `${last10.slice(0, 3)} ${last10.slice(3, 6)}-${last10.slice(6)}`;
+  }
+  return phone.trim() || 'unknown';
+}
+
 // SMS message types - routed to Twilio instead of Gmail
 const SMS_TYPES: MessageType[] = [
   'SMS_CONFIRM', 'SMS_REMINDER', 'SMS_JOIN_LINK', 'SMS_URGENT',
@@ -230,4 +245,61 @@ export class MessagingService {
   static async wasMessageSent(demoId: string, messageType: MessageType): Promise<boolean> {
     return db.messages.exists(demoId, messageType);
   }
+
+  /**
+   * Forward inbound SMS transcript to ops inbox (Gmail SMTP).
+   * Uses ELYSTRA_TEAM_EMAIL (default elystrateam@gmail.com). Does not touch demo messages table.
+   */
+  static async sendInboundSmsTeamNotification(opts: {
+    fromPhoneE164: string;
+    body: string;
+    intent?: string;
+    senderName?: string;
+    messageSid?: string;
+  }): Promise<void> {
+    const gmailUser = process.env.GMAIL_USER;
+    if (!gmailUser) {
+      console.warn('[TEAM-NOTIFY] GMAIL_USER not set, skip team email');
+      return;
+    }
+
+    const to = process.env.ELYSTRA_TEAM_EMAIL || 'elystrateam@gmail.com';
+    const displayPhone = formatNanpPhoneDisplay(opts.fromPhoneE164);
+    const subject = `Inbound SMS — ${displayPhone}`;
+
+    const meta = [
+      opts.senderName ? `Sender (CRM): ${opts.senderName}` : null,
+      opts.intent ? `Intent: ${opts.intent}` : null,
+      opts.messageSid ? `MessageSid: ${opts.messageSid}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const text = `${displayPhone} said :\n\n${opts.body}${meta ? `\n\n—\n${meta}` : ''}`;
+    const html = `<p><strong>${displayPhone}</strong> said :</p><pre style="white-space:pre-wrap;font-family:system-ui,sans-serif">${escapeHtml(
+      opts.body
+    )}</pre>${meta ? `<p style="color:#666;font-size:12px">${escapeHtml(meta).replace(/\n/g, '<br/>')}</p>` : ''}`;
+
+    const fromName = 'Elystra Inbound';
+    const from = `"${fromName}" <${gmailUser}>`;
+
+    const transporter = getGmailTransporter();
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      text,
+      html,
+      replyTo: gmailUser,
+    });
+    console.log(`[TEAM-NOTIFY] Team email sent to ${to}, id=${info.messageId}`);
+  }
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

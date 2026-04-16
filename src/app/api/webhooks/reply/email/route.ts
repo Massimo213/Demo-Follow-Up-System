@@ -62,7 +62,9 @@ export async function POST(request: NextRequest) {
     // Clean up the text body (remove quoted replies, signatures)
     const cleanBody = cleanEmailBody(textBody);
 
-    console.log(`Email reply from ${fromEmail}: ${cleanBody.substring(0, 100)}`);
+    console.log(
+      `Email reply from ${fromEmail} (${cleanBody.length} chars): ${cleanBody}`
+    );
 
     // Process the reply
     const result = await ReplyService.processReply(fromEmail, cleanBody);

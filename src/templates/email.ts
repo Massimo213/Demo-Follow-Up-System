@@ -1,8 +1,8 @@
 /**
  * Email Templates v2
- * Consequence-driven. Pre-demo frame: sales infrastructure, show-up focus.
+ * Consequence-driven attendance frame + infrastructure identity (infrastructural review, not product tour).
  * Every email demands YES / RESCHEDULE. No soft outs.
- * Signed: Best, David / Elystra
+ * Signed: David, Elystra
  */
 
 import type { Demo, MessageType } from '@/types/demo';
@@ -69,9 +69,6 @@ export class EmailTemplates {
     return templateFn ? templateFn() : null;
   }
 
-  /**
-   * CONFIRM_INITIAL: Immediate after booking
-   */
   static confirmInitial(demo: Demo): EmailTemplate {
     const time = formatDemoTime(demo);
     const firstName = demo.name.split(' ')[0];
@@ -79,61 +76,52 @@ export class EmailTemplates {
     return {
       subject: `Locked: 7-minute Elystra walkthrough - ${time}`,
       html: wrapHtml(`
-<p>Hi ${firstName},</p>
+<p>Hey ${firstName},</p>
 
-<p>You're locked for <strong>${time}</strong>.</p>
+<p>I've locked <strong>${time}</strong> for your 7-minute walkthrough.</p>
 
-<p>This is the 7-minute review where we look at one thing only:</p>
+<p>170+ agencies were leaking money after buyer interest already existed. Elystra gave them control over that part of the sale. That is what moved the numbers.</p>
 
-<p>whether Elystra can give your agency a real shot at breaking the 10-30% close-rate cycle and moving toward 50%+ close rates within six weeks by installing a cleaner, faster, more controlled sales motion.</p>
-
-<p>We'll show you how 170 agency partners across Canada and the US use Elystra to tighten the part of the sales process where momentum usually weakens after interest exists.</p>
-
-<p>We'll look at:</p>
-<p>- where the current sales motion loses force</p>
-<p>- how Elystra changes that motion operationally</p>
-<p>- whether the system fits how your agency actually sells</p>
+<p>I'll show you where your current sales motion is leaking, and whether Elystra deserves to sit underneath it.</p>
 
 ${demo.join_url ? `<p><strong>Join link:</strong> <a href="${demo.join_url}">${demo.join_url}</a></p>` : ''}
+
+<p>What we'll cover:</p>
+<p>- where your sales motion is losing control between buyer interest and collected cash</p>
+<p>- what Elystra controls after buyer interest exists</p>
+<p>- whether this deserves to sit under your sales process</p>
 
 <p><strong>Reply YES</strong> to confirm.</p>
 
 <p><strong>Reply RESCHEDULE</strong> if you need a different time.</p>
 
-<p>Best,<br>
-David<br>
+<p>David<br>
 Elystra</p>
       `),
-      text: `Hi ${firstName},
+      text: `Hey ${firstName},
 
-You're locked for ${time}.
+I've locked ${time} for your 7-minute walkthrough.
 
-This is the 7-minute review where we look at one thing only:
+170+ agencies were leaking money after buyer interest already existed. Elystra gave them control over that part of the sale. That is what moved the numbers.
 
-whether Elystra can give your agency a real shot at breaking the 10-30% close-rate cycle and moving toward 50%+ close rates within six weeks by installing a cleaner, faster, more controlled sales motion.
-
-We'll show you how 170 agency partners across Canada and the US use Elystra to tighten the part of the sales process where momentum usually weakens after interest exists.
-
-We'll look at:
-- where the current sales motion loses force
-- how Elystra changes that motion operationally
-- whether the system fits how your agency actually sells
+I'll show you where your current sales motion is leaking, and whether Elystra deserves to sit underneath it.
 
 ${demo.join_url ? `Join link: ${demo.join_url}` : ''}
+
+What we'll cover:
+- where your sales motion is losing control between buyer interest and collected cash
+- what Elystra controls after buyer interest exists
+- whether this deserves to sit under your sales process
 
 Reply YES to confirm.
 
 Reply RESCHEDULE if you need a different time.
 
-Best,
 David
 Elystra`,
     };
   }
 
-  /**
-   * CONFIRM_INITIAL_LOOM: FUTURE demos, confirm with Loom intro video
-   */
   static confirmInitialLoom(demo: Demo): EmailTemplate {
     const time = formatDemoTime(demo);
     const firstName = demo.name.split(' ')[0];
@@ -142,63 +130,58 @@ Elystra`,
     return {
       subject: `Locked: 7-minute Elystra walkthrough - ${time}`,
       html: wrapHtml(`
-<p>Hi ${firstName},</p>
+<p>Hey ${firstName},</p>
 
-<p>You're locked for <strong>${time}</strong>.</p>
+<p>I've locked <strong>${time}</strong> for your 7-minute walkthrough.</p>
 
 <p>Before we hop on, I recorded a quick 2-minute intro so you know exactly what to expect:</p>
 
 <p><a href="${loomUrl}" class="cta">Watch the intro</a></p>
 
-<p>This is the 7-minute review where we look at one thing only: whether Elystra can give your agency a real shot at breaking the 10-30% close-rate cycle and moving toward 50%+ close rates within six weeks by installing a cleaner, faster, more controlled sales motion.</p>
+<p>170+ agencies were leaking money after buyer interest already existed. Elystra gave them control over that part of the sale. That is what moved the numbers.</p>
 
-<p>We'll show you how 170 agency partners across Canada and the US use Elystra to tighten the part of the sales process where momentum usually weakens after interest exists.</p>
-
-<p>We'll look at:</p>
-<p>- where the current sales motion loses force</p>
-<p>- how Elystra changes that motion operationally</p>
-<p>- whether the system fits how your agency actually sells</p>
+<p>I'll show you where your current sales motion is leaking, and whether Elystra deserves to sit underneath it.</p>
 
 ${demo.join_url ? `<p><strong>Join link:</strong> <a href="${demo.join_url}">${demo.join_url}</a></p>` : ''}
+
+<p>What we'll cover:</p>
+<p>- where your sales motion is losing control between buyer interest and collected cash</p>
+<p>- what Elystra controls after buyer interest exists</p>
+<p>- whether this deserves to sit under your sales process</p>
 
 <p><strong>Reply YES</strong> to confirm.</p>
 
 <p><strong>Reply RESCHEDULE</strong> if you need a different time.</p>
 
-<p>Best,<br>
-David<br>
+<p>David<br>
 Elystra</p>
       `),
-      text: `Hi ${firstName},
+      text: `Hey ${firstName},
 
-You're locked for ${time}.
+I've locked ${time} for your 7-minute walkthrough.
 
 Watch a 2-minute intro before we hop on: ${loomUrl}
 
-This is the 7-minute review where we look at one thing only: whether Elystra can give your agency a real shot at breaking the 10-30% close-rate cycle and moving toward 50%+ close rates within six weeks by installing a cleaner, faster, more controlled sales motion.
+170+ agencies were leaking money after buyer interest already existed. Elystra gave them control over that part of the sale. That is what moved the numbers.
 
-We'll show you how 170 agency partners across Canada and the US use Elystra to tighten the part of the sales process where momentum usually weakens after interest exists.
-
-We'll look at:
-- where the current sales motion loses force
-- how Elystra changes that motion operationally
-- whether the system fits how your agency actually sells
+I'll show you where your current sales motion is leaking, and whether Elystra deserves to sit underneath it.
 
 ${demo.join_url ? `Join link: ${demo.join_url}` : ''}
+
+What we'll cover:
+- where your sales motion is losing control between buyer interest and collected cash
+- what Elystra controls after buyer interest exists
+- whether this deserves to sit under your sales process
 
 Reply YES to confirm.
 
 Reply RESCHEDULE if you need a different time.
 
-Best,
 David
 Elystra`,
     };
   }
 
-  /**
-   * CONFIRM_REMINDER: NEXT_DAY T-4h, day-of reminder email
-   */
   static confirmReminder(demo: Demo): EmailTemplate {
     const time = formatShortTime(demo);
     const firstName = demo.name.split(' ')[0];
@@ -206,62 +189,69 @@ Elystra`,
     return {
       subject: `${firstName} - today at ${time}`,
       html: wrapHtml(`
-<p>Hi ${firstName},</p>
+<p>${firstName},</p>
 
-<p>We're on for <strong>${time} today</strong>.</p>
+<p>I'd like to know if we're still on for <strong>${time} today</strong> so I know whether to release the slot or hold it for you.</p>
 
-<p>This is not a generic walkthrough.</p>
+<p>7 minutes. Infrastructural review: where your sales motion loses control between buyer interest and collected cash, not a product tour.</p>
 
-<p>It is the 7-minute review where we look at whether Elystra can give your agency:</p>
-<p>- a faster sales motion</p>
-<p>- more control over live opportunities</p>
-<p>- stronger follow-up after scope is out</p>
-<p>- and a real shot at turning more pipeline into collected revenue</p>
+<p><strong>Reply YES</strong> to confirm.</p>
 
-<p>If the system fits, the gain is simple: less ghosting, less competitive slippage, less weak follow-up after scope is out, and a better shot at breaking the 10-30% cycle that keeps agencies stuck.</p>
+<p><strong>Reply RESCHEDULE</strong> if something changed.</p>
 
-<p><strong>Reply YES</strong> to hold the slot.</p>
-
-<p><strong>Reply RESCHEDULE</strong> if something changed on your side.</p>
-
-<p>Best,<br>
-David<br>
+<p>David<br>
 Elystra</p>
       `),
-      text: `Hi ${firstName},
+      text: `${firstName},
 
-We're on for ${time} today.
+I'd like to know if we're still on for ${time} today so I know whether to release the slot or hold it for you.
 
-This is not a generic walkthrough.
+7 minutes. Infrastructural review: where your sales motion loses control between buyer interest and collected cash, not a product tour.
 
-It is the 7-minute review where we look at whether Elystra can give your agency:
-- a faster sales motion
-- more control over live opportunities
-- stronger follow-up after scope is out
-- and a real shot at turning more pipeline into collected revenue
+Reply YES to confirm.
 
-If the system fits, the gain is simple: less ghosting, less competitive slippage, less weak follow-up after scope is out, and a better shot at breaking the 10-30% cycle that keeps agencies stuck.
+Reply RESCHEDULE if something changed.
 
-Reply YES to hold the slot.
-
-Reply RESCHEDULE if something changed on your side.
-
-Best,
 David
 Elystra`,
     };
   }
 
-  /**
-   * DAY_OF_REMINDER: FUTURE T-4h, same day-of frame as NEXT_DAY
-   */
   static dayOfReminder(demo: Demo): EmailTemplate {
-    return this.confirmReminder(demo);
+    const time = formatShortTime(demo);
+    const firstName = demo.name.split(' ')[0];
+
+    return {
+      subject: `${firstName} - today at ${time}`,
+      html: wrapHtml(`
+<p>${firstName},</p>
+
+<p>We're on for <strong>${time} today</strong>. Quick number: one agency on this flow pulled $14K in overdue invoices within 48 hours. No hiring, no extra spend.</p>
+
+<p>170+ agencies installed Elystra under the part of the sales motion where money usually leaks. That is what changed close rate, follow-up quality, and collections. 7 minutes to see if it belongs under yours.</p>
+
+<p><strong>Reply YES</strong> to hold your slot.</p>
+
+<p><strong>Reply RESCHEDULE</strong> if something broke. I'd rather move it than have an empty chair.</p>
+
+<p>David<br>
+Elystra</p>
+      `),
+      text: `${firstName},
+
+We're on for ${time} today. Quick number: one agency on this flow pulled $14K in overdue invoices within 48 hours. No hiring, no extra spend.
+
+170+ agencies installed Elystra under the part of the sales motion where money usually leaks. That is what changed close rate, follow-up quality, and collections. 7 minutes to see if it belongs under yours.
+
+Reply YES to hold your slot.
+
+Reply RESCHEDULE if something broke. I'd rather move it than have an empty chair.
+
+David
+Elystra`,
+    };
   }
 
-  /**
-   * VALUE_BOMB: legacy scheduled jobs
-   */
   static valueBomb(demo: Demo): EmailTemplate {
     const time = formatDemoTime(demo);
     const day = formatDay(demo);
@@ -274,77 +264,66 @@ Elystra`,
 
 <p>Before our 7-minute walkthrough on <strong>${time}</strong>:</p>
 
-<p>One agency using this exact flow pulled $14K in overdue invoices within 48 hours. Not by hiring. Not by scaling spend. Just by tightening the gap between proposal and payment.</p>
+<p>One agency on this flow pulled $14K in overdue invoices within 48 hours. Not from hiring or spend. From taking control between proposal and collected cash.</p>
 
-<p>170 agency partners across Canada and the US use Elystra to tighten the part of the sales process where momentum usually weakens after interest exists.</p>
+<p>170+ agencies installed Elystra under the part of the sale where money usually leaks. Same structural move.</p>
 
-<p>No ask, just wanted you to have context before we talk. See you ${day}.</p>
+<p>No ask - just context before we talk. See you ${day}.</p>
 
-<p>Best,<br>
-David<br>
+<p>David<br>
 Elystra</p>
       `),
       text: `${firstName},
 
 Before our 7-minute walkthrough on ${time}:
 
-One agency using this exact flow pulled $14K in overdue invoices within 48 hours. Not by hiring. Not by scaling spend. Just by tightening the gap between proposal and payment.
+One agency on this flow pulled $104K in overdue invoices within 48 hours. Not from hiring or spend. From taking complete control of there deals and having the right infrastructure .
+170+ agencies installed Elystra under the part of the sale where money usually leaks.
 
-170 agency partners across Canada and the US use Elystra to tighten the part of the sales process where momentum usually weakens after interest exists.
+Just context before we talk. See you ${day}.
 
-No ask, just wanted you to have context before we talk. See you ${day}.
-
-Best,
 David
 Elystra`,
     };
   }
 
-  /**
-   * JOIN_LINK: T-10min
-   */
   static joinLink(demo: Demo): EmailTemplate {
     const firstName = demo.name.split(' ')[0];
 
     return {
-      subject: `Join link - Elystra walkthrough starting now`,
+      subject: `Join link : 7-minute walkthrough starting now`,
       html: wrapHtml(`
-<p>Hi ${firstName},</p>
+<p>${firstName},</p>
 
-<p>I'm ready.</p>
-
-<p>This is the 7 minutes where we see whether Elystra fits your operation and deserves to sit underneath your sales motion.</p>
+<p>I'm ready. This is the infrastructural review: where your motion is exposed after buyer interest exists, what Elystra controls in that stretch, and whether it deserves to sit under your process.</p>
 
 <a href="${demo.join_url}" class="cta">Join Walkthrough</a>
 
-<p>Join here:<br>
+<p>Or copy this link:<br>
 <span class="muted">${demo.join_url}</span></p>
 
-<p>If timing moved on your side, <strong>reply RESCHEDULE</strong> and we'll rebook it cleanly.</p>
+<p>If timing blew up on your side, <strong>reply RESCHEDULE</strong> and I'll give your slot to someone else.</p>
 
-<p>Best,<br>
-David<br>
+<p class="muted">If I don't hear back, I'll assume this isn't a priority and close the file.</p>
+
+<p>David<br>
 Elystra</p>
       `),
-      text: `Hi ${firstName},
+      text: `${firstName},
 
-I'm ready.
-
-This is the 7 minutes where we see whether Elystra fits your operation and deserves to sit underneath your sales motion.
+I'm ready. This is the infrastructural review: where your motion is exposed after buyer interest exists, what Elystra controls in that stretch, and whether it deserves to sit under your process.
 
 Join here: ${demo.join_url}
 
-If timing moved on your side, reply RESCHEDULE and we'll rebook it cleanly.
+If timing blew up on your side, reply RESCHEDULE and I'll give your slot to someone else.
 
-Best,
+If I don't hear back, I'll assume this isn't a priority and close the file.
+
 David
 Elystra`,
     };
   }
 
-  /**
-   * POST_NO_SHOW: T+1h after demo
-   */
   static postNoShow(demo: Demo): EmailTemplate {
     const firstName = demo.name.split(' ')[0];
     const rescheduleUrl = process.env.RESCHEDULE_URL || demo.join_url;
@@ -352,31 +331,29 @@ Elystra`,
     return {
       subject: `Missed you today - still worth 7 minutes?`,
       html: wrapHtml(`
-<p>Hi ${firstName},</p>
+<p>${firstName},</p>
 
-<p>We missed each other today.</p>
+<p>We missed each other today. These things happen.</p>
 
-<p>If it is still worth seeing whether Elystra can give your agency a real shot at breaking the 10-30% cycle, reducing ghosting, and tightening the sales motion after interest exists, pick a new time here:</p>
+<p>If it's still worth 7 minutes to see how 170+ agencies took control after buyer interest already existed, and what that did to close rate and collections, grab a new slot:</p>
 
 <p><a href="${rescheduleUrl}" class="cta">Pick a New Time</a></p>
 
-<p>If not, no problem. We'll leave it there cleanly.</p>
+<p>If not, I'll close the file on my end. No follow-up, no hard feelings.</p>
 
-<p>Best,<br>
-David<br>
+<p>David<br>
 Elystra</p>
       `),
-      text: `Hi ${firstName},
+      text: `${firstName},
 
-We missed each other today.
+We missed each other today. These things happen.
 
-If it is still worth seeing whether Elystra can give your agency a real shot at breaking the 10-30% cycle, reducing ghosting, and tightening the sales motion after interest exists, pick a new time here:
+If it's still worth 7 minutes to see how 170+ agencies took control after buyer interest already existed, and what that did to close rate and collections, grab a new slot:
 
 ${rescheduleUrl}
 
-If not, no problem. We'll leave it there cleanly.
+If not, I'll close the file on my end. No follow-up, no hard feelings.
 
-Best,
 David
 Elystra`,
     };
