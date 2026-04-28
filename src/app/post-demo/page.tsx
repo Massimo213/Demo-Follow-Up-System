@@ -131,7 +131,7 @@ export default function PostDemoPage() {
         setToast({ ok: false, text: data.details?.[0]?.message || data.error || 'Failed' });
         return;
       }
-      setToast({ ok: true, text: `${form.agency_name} added — 6-day touch sequence scheduled` });
+      setToast({ ok: true, text: `${form.agency_name} added — post-demo touch sequence scheduled` });
       setForm(BLANK);
       loadProspects();
     } catch (err) {
@@ -163,7 +163,7 @@ export default function PostDemoPage() {
         <div style={{ marginBottom: 32 }}>
           <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: '#0066ff' }}>ELYSTRA</span>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: '4px 0 4px', color: '#111' }}>Post-Demo Prospects</h1>
-          <p style={{ fontSize: 14, color: '#666', margin: 0 }}>Add a prospect after the demo. Automations run Day 0/1/2/3/4/6 (email + SMS). Founder calls remain manual (Day 2 mandatory, Day 5 conditional).</p>
+          <p style={{ fontSize: 14, color: '#666', margin: 0 }}>Add a prospect after the demo. Automations run on a fixed schedule (email + SMS through close). Founder calls remain manual (Day 2 mandatory, Day 5 conditional).</p>
         </div>
 
         {/* ─── Two-column: form left, active right ─── */}

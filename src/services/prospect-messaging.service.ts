@@ -34,6 +34,7 @@ function getTwilio(): Twilio.Twilio {
 
 const SMS_TYPES: ProspectMessageType[] = [
   'PD_SMS_ASSESSMENT_WORKSPACE',
+  'PD_SMS_STAKEHOLDER_FOLLOWUP',
   'PD_SMS_DECISION',
 ];
 
