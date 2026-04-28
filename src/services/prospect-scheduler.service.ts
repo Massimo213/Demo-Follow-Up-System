@@ -1,13 +1,12 @@
 /**
  * Prospect Scheduler Service
- * 6-day post-demo OS automation.
+ * 6-day post-demo OS — single objective: paid activation or clean, explicit exit.
  *
- * Founder/manual: Day 0 recap+assessment+workspace, Day 2 call, Day 5 conditional call.
- * Automated touches:
- * - Day 0: PD_SMS_ASSESSMENT_WORKSPACE (shortly after manual email)
- * - Day 1: PD_STAKEHOLDER_BRIEF
- * - Day 2: PD_INTERNAL_CALL_REMINDER
- * - Day 2: PD_SMS_MISSED_CALL
+ * Founder/manual: Day 0 recap+assessment+workspace, Day 2 call, optional Day 5 call.
+ * Automated touches (all ladder to close / name blocker / close file):
+ * - Day 0: PD_SMS_ASSESSMENT_WORKSPACE — shortly after manual Day-0 email; inbox pointer only
+ * - Day 1: PD_STAKEHOLDER_BRIEF (email)
+ * - Day 2: PD_INTERNAL_CALL_REMINDER (email to team)
  * - Day 3: PD_DIRECT_ASK
  * - Day 4: PD_SMS_DECISION
  * - Day 6: PD_CLOSING_FILE
@@ -25,10 +24,9 @@ type SequenceStep = {
 };
 
 const POST_DEMO_SEQUENCE: SequenceStep[] = [
-  { messageType: 'PD_SMS_ASSESSMENT_WORKSPACE', delayMs: 45 * MINUTE }, // Day 0
+  { messageType: 'PD_SMS_ASSESSMENT_WORKSPACE', delayMs: 15 * MINUTE }, // Day 0: receipt nudge after manual send + prospect logged
   { messageType: 'PD_STAKEHOLDER_BRIEF', delayMs: 24 * HOUR },          // Day 1
   { messageType: 'PD_INTERNAL_CALL_REMINDER', delayMs: 48 * HOUR },     // Day 2
-  { messageType: 'PD_SMS_MISSED_CALL', delayMs: 52 * HOUR },            // Day 2
   { messageType: 'PD_DIRECT_ASK', delayMs: 72 * HOUR },                 // Day 3
   { messageType: 'PD_SMS_DECISION', delayMs: 96 * HOUR },               // Day 4
   { messageType: 'PD_CLOSING_FILE', delayMs: 144 * HOUR },              // Day 6

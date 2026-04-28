@@ -194,26 +194,55 @@ If the assessment is directionally right on your side, the next step is simple: 
     const name = firstName(prospect);
     const { assessment, workspace } = assessmentWorkspaceLinks(prospect);
 
-    const assessmentHtml = assessment
-      ? `<a href="${assessment}">${assessment}</a>`
-      : `<span class="muted">(same link as in your Day 0 email, reply if you need it resent)</span>`;
-    const workspaceHtml = workspace
-      ? `<a href="${workspace}">${workspace}</a>`
-      : `<span class="muted">(same link as in your Day 0 email, reply if you need it resent)</span>`;
+    const hasAssessment = Boolean(assessment);
+    const hasWorkspace = Boolean(workspace);
+    const hasAnyLink = hasAssessment || hasWorkspace;
+    const hasBothLinks = hasAssessment && hasWorkspace;
 
-    const assessmentText = assessment || '(same link as Day 0, reply if you need it resent)';
-    const workspaceText = workspace || '(same link as Day 0, reply if you need it resent)';
+    const linkLinesHtml: string[] = [];
+    if (hasAssessment) {
+      linkLinesHtml.push(
+        `<strong>Revenue Infrastructure Assessment:</strong> <a href="${assessment}">${assessment}</a>`
+      );
+    }
+    if (hasWorkspace) {
+      linkLinesHtml.push(
+        `<strong>Private Elystra Evaluation Workspace:</strong> <a href="${workspace}">${workspace}</a>`
+      );
+    }
+
+    const introHtml = hasBothLinks
+      ? `<p>You now have both pieces on your side:</p>
+
+<p>${linkLinesHtml.join('<br>\n')}</p>`
+      : hasAnyLink
+        ? `<p>${linkLinesHtml.join('<br>\n')}</p>`
+        : '';
+
+    const linkLinesText: string[] = [];
+    if (hasAssessment) linkLinesText.push(`Revenue Infrastructure Assessment: ${assessment}`);
+    if (hasWorkspace) linkLinesText.push(`Private Elystra Evaluation Workspace: ${workspace}`);
+
+    const introText =
+      hasBothLinks
+        ? `
+
+You now have both pieces on your side:
+
+${linkLinesText.join('\n')}
+`
+        : hasAnyLink
+          ? `
+
+${linkLinesText.join('\n')}
+`
+          : '';
 
     return {
       subject: `Internal decision path`,
       html: wrapHtml(`
 <p>Hi ${name},</p>
-
-<p>You now have both pieces on your side:</p>
-
-<p><strong>Revenue Infrastructure Assessment:</strong> ${assessmentHtml}<br>
-<strong>Private Elystra Evaluation Workspace:</strong> ${workspaceHtml}</p>
-
+${introHtml}
 <p>The assessment gives you the business case.<br>
 The workspace gives you the live proof.</p>
 
@@ -231,14 +260,11 @@ The workspace gives you the live proof.</p>
 
 <p>If something else is holding movement up, make that clear as well so we can both attack it correctly.</p>
 
+<p>We are only driving two outcomes from here: move to activation, or tell us clearly it is a no so we close the file cleanly.</p>
+
 <p>David from Elystra</p>
       `),
-      text: `Hi ${name},
-
-You now have both pieces on your side:
-
-Revenue Infrastructure Assessment: ${assessmentText}
-Private Elystra Evaluation Workspace: ${workspaceText}
+      text: `Hi ${name},${introText}
 
 The assessment gives you the business case.
 The workspace gives you the live proof.
@@ -255,6 +281,8 @@ If another person needs to review this with you, let us know as soon as possible
 
 If something else is holding movement up, make that clear as well so we can both attack it correctly.
 
+We are only driving two outcomes from here: move to activation, or tell us clearly it is a no so we close the file cleanly.
+
 David from Elystra`,
     };
   }
@@ -266,7 +294,7 @@ David from Elystra`,
     const name = firstName(prospect);
 
     return {
-      subject: `What is the blocker on your side?`,
+      subject: `Activate, one blocker, or we close the file`,
       html: wrapHtml(`
 <p>Hi ${name},</p>
 
@@ -290,7 +318,7 @@ We would rather understand the real blocker than let the decision sit in silence
 
 <p>So the cleanest next step is this:</p>
 
-<p>reply with the blocker, or send two times that work for a short follow-up review and we'll keep it focused.</p>
+<p>reply with the single blocker, send two times for a 15-minute activation/decision call, or say pass and we close the file.</p>
 
 <p>Best,<br>
 David from Elystra</p>
@@ -315,7 +343,7 @@ That is the delta we are trying to create.
 
 So the cleanest next step is this:
 
-reply with the blocker, or send two times that work for a short follow-up review and we'll keep it focused.
+reply with the single blocker, send two times for a 15-minute activation/decision call, or say pass and we close the file.
 
 Best,
 David from Elystra`,
@@ -384,7 +412,7 @@ David from Elystra`,
 - Demo date: ${prospect.demo_date}
 </p>
 
-<p>Action: call the prospect today. If they do not answer, leave a short voicemail, then the missed-call SMS will handle the follow-up.</p>
+<p>Action: call today — compress to activation or a named blocker. The automated Day 3 email continues the sequence.</p>
 
 <p>David from Elystra</p>
       `),
@@ -398,7 +426,7 @@ This prospect is at the Day 2 founder call step.
 - Email: ${prospect.email}
 - Demo date: ${prospect.demo_date}
 
-Action: call the prospect today. If they do not answer, leave a short voicemail, then the missed-call SMS will handle the follow-up.
+Action: call today — compress to activation or a named blocker. The automated Day 3 email continues the sequence.
 
 David from Elystra`,
     };
