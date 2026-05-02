@@ -8,6 +8,7 @@ export default function Home() {
       <h1>Demo Followup System</h1>
       <p>API-only service. No UI here.</p>
       <p><a href="/post-demo">Add post-demo prospect →</a></p>
+      <p><a href="/organizer">Demo organizer (PQAD / payouts) →</a></p>
       
       <h2>Endpoints</h2>
       <ul>

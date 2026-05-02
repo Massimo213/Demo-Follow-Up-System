@@ -8,7 +8,15 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Demo, ScheduledJob, Message, Reply, DemoStatus, MessageType } from '@/types/demo';
+import type {
+  Demo,
+  ScheduledJob,
+  Message,
+  Reply,
+  DemoStatus,
+  MessageType,
+  PqadVerdict,
+} from '@/types/demo';
 
 let _db: SupabaseClient | null = null;
 
@@ -44,6 +52,17 @@ interface DemoInsert {
   demo_type: string;
   join_url: string;
   status: string;
+  organizer_booked_by?: string;
+}
+
+export interface DemoOrganizerPatch {
+  organizer_booked_by?: string;
+  pqad_verdict?: PqadVerdict;
+  pqad_rejection_reason?: string | null;
+  pqad_locked?: boolean;
+  sdr_payout_cents?: number | null;
+  lieutenant_override_cents?: number | null;
+  pqad_decided_at?: string | null;
 }
 
 // Type for job insert
@@ -175,6 +194,42 @@ export const db = {
       
       if (error) throw error;
       return (data as Demo[]) || [];
+    },
+
+    /** Organizer UI: filter by PQAD view + upcoming/past (scheduled_at vs server now, UTC). */
+    async listForOrganizer(
+      view: 'booked' | 'pqad',
+      period: 'upcoming' | 'past'
+    ): Promise<Demo[]> {
+      const nowIso = new Date().toISOString();
+      let q = table('demos').select('*').limit(1000);
+
+      if (view === 'booked') {
+        q = q.neq('status', 'CANCELLED');
+      } else {
+        q = q.eq('pqad_verdict', 'yes');
+      }
+
+      if (period === 'upcoming') {
+        q = q.gte('scheduled_at', nowIso).order('scheduled_at', { ascending: true });
+      } else {
+        q = q.lt('scheduled_at', nowIso).order('scheduled_at', { ascending: false });
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data as Demo[]) || [];
+    },
+
+    async updateOrganizerFields(id: string, patch: DemoOrganizerPatch): Promise<Demo> {
+      const { data, error } = await table('demos')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Demo;
     },
   },
 

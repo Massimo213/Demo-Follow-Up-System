@@ -32,6 +32,9 @@ export type MessageType =
   | 'SMS_DAY_BEFORE'
   | 'POST_NO_SHOW';
 
+/** Organizer / payout rail — set only via Massimo-only API */
+export type PqadVerdict = 'pending' | 'yes' | 'no';
+
 export interface Demo {
   id: string;
   calendly_event_id: string;
@@ -48,6 +51,14 @@ export interface Demo {
   joined_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Organizer rail — present after migration 011 */
+  organizer_booked_by?: string;
+  pqad_verdict?: PqadVerdict;
+  pqad_rejection_reason?: string | null;
+  pqad_locked?: boolean;
+  sdr_payout_cents?: number | null;
+  lieutenant_override_cents?: number | null;
+  pqad_decided_at?: string | null;
 }
 
 export interface ScheduledJob {
