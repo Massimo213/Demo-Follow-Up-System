@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "send:sdr-test": "node --env-file=.env scripts/send-sdr-outreach.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
