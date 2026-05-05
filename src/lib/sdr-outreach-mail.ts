@@ -1,34 +1,14 @@
-/**
- * One-off SDR outreach via Gmail SMTP (same credentials as the app).
- * Usage:
- *   node --env-file=.env scripts/send-sdr-outreach.mjs
- *   node --env-file=.env scripts/send-sdr-outreach.mjs --to other@example.com
- *
- * Requires: GMAIL_USER, GMAIL_APP_PASSWORD
- */
-
-import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import nodemailer from 'nodemailer';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.join(__dirname, '..');
-const LOGO_PATH = path.join(ROOT, 'public', 'elystra-logo.png');
+export const SDR_OUTREACH_SUBJECT = 'SDR B2B SaaS role - conversation this week';
 
-function parseArgs() {
-  const args = process.argv.slice(2);
-  let to = 'elystrateam@gmail.com';
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--to' && args[i + 1]) {
-      to = args[i + 1];
-      i++;
-    }
-  }
-  return { to };
+export function getSdrOutreachLogoPath(): string {
+  return path.join(process.cwd(), 'public', 'elystra-logo.png');
 }
 
-function buildHtml() {
+export function buildSdrOutreachHtml(): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
@@ -79,7 +59,7 @@ function buildHtml() {
 </html>`;
 }
 
-function buildText() {
+export function buildSdrOutreachText(): string {
   return `Hi There
 
 We reviewed your profile and application and noticed your experience in sales.
@@ -101,19 +81,17 @@ Elystra Infrastructure Systems LLC
 `;
 }
 
-async function main() {
-  const { to } = parseArgs();
+export async function sendSdrOutreachEmail(to: string): Promise<{ messageId?: string }> {
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
 
   if (!user || !pass) {
-    console.error('Missing GMAIL_USER or GMAIL_APP_PASSWORD (use .env via node --env-file=.env)');
-    process.exit(1);
+    throw new Error('GMAIL_USER or GMAIL_APP_PASSWORD not configured');
   }
 
-  if (!fs.existsSync(LOGO_PATH)) {
-    console.error('Logo not found:', LOGO_PATH);
-    process.exit(1);
+  const logoPath = getSdrOutreachLogoPath();
+  if (!fs.existsSync(logoPath)) {
+    throw new Error(`Logo not found at ${logoPath}`);
   }
 
   const transporter = nodemailer.createTransport({
@@ -121,29 +99,23 @@ async function main() {
     auth: { user, pass },
   });
 
-  const fromName = 'Elystra';
-  const from = `"${fromName}" <${user}>`;
+  const from = `"Elystra" <${user}>`;
 
   const info = await transporter.sendMail({
     from,
     to,
     replyTo: user,
-    subject: 'SDR B2B SaaS role - conversation this week',
-    text: buildText(),
-    html: buildHtml(),
+    subject: SDR_OUTREACH_SUBJECT,
+    text: buildSdrOutreachText(),
+    html: buildSdrOutreachHtml(),
     attachments: [
       {
         filename: 'elystra-logo.png',
-        path: LOGO_PATH,
+        path: logoPath,
         cid: 'elystralogo',
       },
     ],
   });
 
-  console.log('Sent:', to, info.messageId);
+  return { messageId: info.messageId };
 }
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
