@@ -15,7 +15,10 @@ export const dynamic = 'force-dynamic';
 const CreateProspectSchema = z.object({
   name: z.string().min(1, 'Name required'),
   email: z.string().email('Valid email required'),
-  phone: z.string().nullish().transform((v) => (v && v.trim() ? v.trim() : null)),
+  phone: z
+    .string()
+    .transform((v) => v.trim())
+    .pipe(z.string().min(1, 'Phone required')),
   agency_name: z.string().min(1, 'Agency name required'),
   proposals_per_month: z.preprocess(
     (v) => { if (v === '' || v === undefined || v === null) return null; const n = Number(v); return Number.isNaN(n) ? null : n; },
@@ -74,7 +77,7 @@ export async function POST(req: NextRequest) {
     const prospect = await prospectDb.prospects.insert({
       name: parsed.name,
       email: parsed.email.toLowerCase(),
-      phone: parsed.phone || null,
+      phone: parsed.phone,
       agency_name: parsed.agency_name,
       proposals_per_month: parsed.proposals_per_month ?? null,
       avg_deal_size: parsed.avg_deal_size ?? null,

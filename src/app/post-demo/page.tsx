@@ -119,7 +119,7 @@ export default function PostDemoPage() {
           time_to_cash_days: optNum(form.time_to_cash_days, 0),
           objection_type: form.objection_type,
           demo_date: form.demo_date,
-          phone: form.phone.trim() || null,
+          phone: form.phone.trim(),
           notes: form.notes.trim() || null,
           agency_proposal_link: form.agency_proposal_link.trim() || null,
           assessment_link: form.assessment_link.trim() || null,
@@ -182,6 +182,7 @@ export default function PostDemoPage() {
             <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <input style={inp} placeholder="Name *" value={form.name} onChange={(e) => set('name', e.target.value)} required />
               <input style={inp} type="email" placeholder="Email *" value={form.email} onChange={(e) => set('email', e.target.value)} required />
+              <input style={inp} type="tel" placeholder="Phone *" value={form.phone} onChange={(e) => set('phone', e.target.value)} required />
               <input style={inp} placeholder="Agency *" value={form.agency_name} onChange={(e) => set('agency_name', e.target.value)} required />
 
               <div style={row}>
@@ -200,7 +201,6 @@ export default function PostDemoPage() {
                 <input style={inpH} type="date" value={form.demo_date} onChange={(e) => set('demo_date', e.target.value)} required />
               </div>
 
-              <input style={inp} type="tel" placeholder="Phone (optional)" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
               <input style={inp} type="url" placeholder="Agency proposal link (optional)" value={form.agency_proposal_link} onChange={(e) => set('agency_proposal_link', e.target.value)} />
               <input style={inp} type="url" placeholder="Assessment link — Day 1 email (optional)" value={form.assessment_link} onChange={(e) => set('assessment_link', e.target.value)} />
               <input style={inp} type="url" placeholder="Evaluation workspace link — Day 1 email (optional)" value={form.workspace_link} onChange={(e) => set('workspace_link', e.target.value)} />
