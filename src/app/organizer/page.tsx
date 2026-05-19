@@ -53,6 +53,13 @@ function pqadDotColor(verdict: PqadVerdict | undefined): string {
   }
 }
 
+function notesPreview(text: string): string {
+  const t = text.trim();
+  if (!t) return '';
+  const oneLine = t.replace(/\s+/g, ' ');
+  return oneLine.length > 48 ? `${oneLine.slice(0, 48)}…` : oneLine;
+}
+
 function formatDemoTimeRange(d: Demo): string {
   const tz = d.timezone?.trim() || 'UTC';
   const start = parseISO(d.scheduled_at);
@@ -75,11 +82,15 @@ export default function OrganizerDashboardPage() {
   const [demos, setDemos] = useState<Demo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notesModalDemoId, setNotesModalDemoId] = useState<string | null>(null);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
   const [rowState, setRowState] = useState<
     Record<
       string,
       {
         organizer_booked_by: string;
+        organizer_personal_notes: string;
         pqad_verdict: PqadVerdict;
         pqad_rejection_reason: string;
         sdr_payout_cents: string;
@@ -114,6 +125,7 @@ export default function OrganizerDashboardPage() {
       for (const d of data.demos) {
         next[d.id] = {
           organizer_booked_by: d.organizer_booked_by ?? '',
+          organizer_personal_notes: d.organizer_personal_notes ?? '',
           pqad_verdict: d.pqad_verdict ?? 'pending',
           pqad_rejection_reason: d.pqad_rejection_reason ?? '',
           sdr_payout_cents: d.sdr_payout_cents != null ? String(d.sdr_payout_cents) : '',
@@ -213,6 +225,60 @@ export default function OrganizerDashboardPage() {
       if (!cur) return s;
       return { ...s, [id]: { ...cur, [field]: value } };
     });
+  }
+
+  const notesModalDemo = notesModalDemoId
+    ? demos.find((d) => d.id === notesModalDemoId)
+    : null;
+
+  function openNotesModal(demo: Demo) {
+    const st = rowState[demo.id];
+    setNotesModalDemoId(demo.id);
+    setNotesDraft(st?.organizer_personal_notes ?? demo.organizer_personal_notes ?? '');
+    setError(null);
+  }
+
+  function closeNotesModal() {
+    setNotesModalDemoId(null);
+    setNotesDraft('');
+    setNotesSaving(false);
+  }
+
+  async function saveNotes() {
+    if (!notesModalDemoId) return;
+    setNotesSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/organizer/demos/${notesModalDemoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ organizer_personal_notes: notesDraft }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((payload as { error?: string }).error ?? 'Failed to save notes');
+        setNotesSaving(false);
+        return;
+      }
+      setRowState((s) => {
+        const cur = s[notesModalDemoId];
+        if (!cur) return s;
+        return {
+          ...s,
+          [notesModalDemoId]: { ...cur, organizer_personal_notes: notesDraft },
+        };
+      });
+      setDemos((list) =>
+        list.map((d) =>
+          d.id === notesModalDemoId ? { ...d, organizer_personal_notes: notesDraft } : d
+        )
+      );
+      closeNotesModal();
+    } catch {
+      setError('Failed to save notes');
+      setNotesSaving(false);
+    }
   }
 
   return (
@@ -375,7 +441,7 @@ export default function OrganizerDashboardPage() {
                   <Fragment key={group.sortKey}>
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         style={{
                           padding: 0,
                           border: 'none',
@@ -531,6 +597,31 @@ export default function OrganizerDashboardPage() {
                               />
                             )}
                           </td>
+                          <td style={{ ...cell, minWidth: 120, maxWidth: 200 }}>
+                            <button
+                              type="button"
+                              onClick={() => openNotesModal(d)}
+                              title="Open personal notes"
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '8px 10px',
+                                borderRadius: 8,
+                                border: '1px solid #3a3a40',
+                                background: '#141416',
+                                color: (st?.organizer_personal_notes ?? '').trim()
+                                  ? '#e8e8ea'
+                                  : '#636366',
+                                fontSize: 12,
+                                cursor: 'pointer',
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              {(st?.organizer_personal_notes ?? '').trim()
+                                ? notesPreview(st.organizer_personal_notes)
+                                : 'Add notes…'}
+                            </button>
+                          </td>
                           <td style={cell}>
                             {locked ? (
                               <span style={{ fontSize: 12, color: '#636366' }}>locked</span>
@@ -567,6 +658,126 @@ export default function OrganizerDashboardPage() {
           </div>
         )}
       </main>
+
+      {notesModalDemo ? (
+        <div
+          role="presentation"
+          onClick={() => closeNotesModal()}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.65)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notes-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 640,
+              maxHeight: 'min(85vh, 720px)',
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#141416',
+              border: '1px solid #3a3a40',
+              borderRadius: 14,
+              boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
+            }}
+          >
+            <div
+              style={{
+                padding: '18px 20px 12px',
+                borderBottom: '1px solid #2a2a2e',
+              }}
+            >
+              <h2
+                id="notes-modal-title"
+                style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#e8e8ea' }}
+              >
+                Personal notes
+              </h2>
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#8e8e93' }}>
+                {notesModalDemo.name}
+                <span style={{ color: '#636366' }}> · </span>
+                {notesModalDemo.email}
+              </p>
+            </div>
+            <div style={{ flex: 1, padding: 16, minHeight: 0 }}>
+              <textarea
+                value={notesDraft}
+                onChange={(e) => setNotesDraft(e.target.value)}
+                placeholder="Anything you want to remember about this prospect…"
+                autoFocus
+                style={{
+                  width: '100%',
+                  height: 'min(52vh, 420px)',
+                  minHeight: 280,
+                  boxSizing: 'border-box',
+                  padding: 14,
+                  borderRadius: 10,
+                  border: '1px solid #3a3a40',
+                  background: '#0a0a0b',
+                  color: '#e8e8ea',
+                  fontSize: 14,
+                  lineHeight: 1.55,
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 10,
+                padding: '12px 16px 16px',
+                borderTop: '1px solid #2a2a2e',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => closeNotesModal()}
+                disabled={notesSaving}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: '1px solid #3a3a40',
+                  background: 'transparent',
+                  color: '#8e8e93',
+                  fontSize: 13,
+                  cursor: notesSaving ? 'wait' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveNotes()}
+                disabled={notesSaving}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#0a84ff',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: notesSaving ? 'wait' : 'pointer',
+                }}
+              >
+                {notesSaving ? 'Saving…' : 'Save notes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

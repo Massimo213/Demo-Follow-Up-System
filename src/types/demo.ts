@@ -59,6 +59,8 @@ export interface Demo {
   sdr_payout_cents?: number | null;
   lieutenant_override_cents?: number | null;
   pqad_decided_at?: string | null;
+  /** Private notes — Massimo organizer UI only */
+  organizer_personal_notes?: string;
 }
 
 export interface ScheduledJob {

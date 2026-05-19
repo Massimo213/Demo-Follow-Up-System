@@ -57,6 +57,7 @@ interface DemoInsert {
 
 export interface DemoOrganizerPatch {
   organizer_booked_by?: string;
+  organizer_personal_notes?: string;
   pqad_verdict?: PqadVerdict;
   pqad_rejection_reason?: string | null;
   pqad_locked?: boolean;

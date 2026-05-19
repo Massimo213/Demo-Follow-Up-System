@@ -5,6 +5,7 @@ import { db, type DemoOrganizerPatch } from '@/lib/db';
 
 const BodySchema = z.object({
   organizer_booked_by: z.string().max(500).optional(),
+  organizer_personal_notes: z.string().max(20000).optional(),
   pqad_verdict: z.enum(['pending', 'yes', 'no']).optional(),
   pqad_rejection_reason: z.string().max(2000).nullable().optional(),
   sdr_payout_cents: z.number().int().min(0).nullable().optional(),
@@ -27,13 +28,6 @@ export async function PATCH(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  if (demo.pqad_locked) {
-    return NextResponse.json(
-      { error: 'Row locked — PQAD decision is final' },
-      { status: 409 }
-    );
-  }
-
   let raw: unknown;
   try {
     raw = await request.json();
@@ -47,7 +41,26 @@ export async function PATCH(
   }
 
   const b = parsed.data;
+
+  const touchesLockedFields =
+    b.organizer_booked_by !== undefined ||
+    b.pqad_verdict !== undefined ||
+    b.pqad_rejection_reason !== undefined ||
+    b.sdr_payout_cents !== undefined ||
+    b.lieutenant_override_cents !== undefined;
+
+  if (demo.pqad_locked && touchesLockedFields) {
+    return NextResponse.json(
+      { error: 'Row locked — PQAD decision is final' },
+      { status: 409 }
+    );
+  }
+
   const patch: DemoOrganizerPatch = {};
+
+  if (b.organizer_personal_notes !== undefined) {
+    patch.organizer_personal_notes = b.organizer_personal_notes;
+  }
 
   if (b.organizer_booked_by !== undefined) {
     patch.organizer_booked_by = b.organizer_booked_by.trim();
