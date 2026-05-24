@@ -1,7 +1,7 @@
 /**
  * Email Templates v2
  * Consequence-driven attendance frame + infrastructure identity (infrastructural review, not product tour).
- * Every email demands YES / RESCHEDULE. No soft outs.
+ * Every email demands YES + a Reschedule link. No soft outs.
  * Signed: David, Elystra
  */
 
@@ -41,6 +41,22 @@ function preDemoAssetHtml(): string {
 
 function preDemoAssetText(): string {
   return `Before we hop on — this is 10% of what Elystra does: ${preDemoAssetUrl()}`;
+}
+
+function rescheduleUrl(): string {
+  return process.env.RESCHEDULE_URL || 'https://www.elystra.online/reschedule';
+}
+
+function confirmActionsHtml(rescheduleNote: string, yesPrompt = 'Reply YES to confirm.'): string {
+  return `<p><strong>${yesPrompt}</strong></p>
+
+<p><a href="${rescheduleUrl()}">Reschedule</a> ${rescheduleNote}</p>`;
+}
+
+function confirmActionsText(rescheduleNote: string, yesPrompt = 'Reply YES to confirm.'): string {
+  return `${yesPrompt}
+
+Reschedule: ${rescheduleUrl()} ${rescheduleNote}`;
 }
 
 function wrapHtml(content: string): string {
@@ -106,9 +122,7 @@ ${preDemoAssetHtml()}
 <p>- what Elystra controls after buyer interest exists</p>
 <p>- whether this deserves to sit under your sales process</p>
 
-<p><strong>Reply YES</strong> to confirm.</p>
-
-<p><strong>Reply RESCHEDULE</strong> if you need a different time.</p>
+${confirmActionsHtml('if you need a different time.')}
 
 <p>David<br>
 Elystra</p>
@@ -130,9 +144,7 @@ What we'll cover:
 - what Elystra controls after buyer interest exists
 - whether this deserves to sit under your sales process
 
-Reply YES to confirm.
-
-Reply RESCHEDULE if you need a different time.
+${confirmActionsText('if you need a different time.')}
 
 David
 Elystra`,
@@ -168,9 +180,7 @@ ${preDemoAssetHtml()}
 <p>- what Elystra controls after buyer interest exists</p>
 <p>- whether this deserves to sit under your sales process</p>
 
-<p><strong>Reply YES</strong> to confirm.</p>
-
-<p><strong>Reply RESCHEDULE</strong> if you need a different time.</p>
+${confirmActionsHtml('if you need a different time.')}
 
 <p>David<br>
 Elystra</p>
@@ -194,9 +204,7 @@ What we'll cover:
 - what Elystra controls after buyer interest exists
 - whether this deserves to sit under your sales process
 
-Reply YES to confirm.
-
-Reply RESCHEDULE if you need a different time.
+${confirmActionsText('if you need a different time.')}
 
 David
 Elystra`,
@@ -218,9 +226,7 @@ Elystra`,
 
 ${preDemoAssetHtml()}
 
-<p><strong>Reply YES</strong> to confirm.</p>
-
-<p><strong>Reply RESCHEDULE</strong> if something changed.</p>
+${confirmActionsHtml('if something changed.')}
 
 <p>David<br>
 Elystra</p>
@@ -233,9 +239,7 @@ I'd like to know if we're still on for ${time} today so I know whether to releas
 
 ${preDemoAssetText()}
 
-Reply YES to confirm.
-
-Reply RESCHEDULE if something changed.
+${confirmActionsText('if something changed.')}
 
 David
 Elystra`,
@@ -257,9 +261,7 @@ Elystra`,
 
 ${preDemoAssetHtml()}
 
-<p><strong>Reply YES</strong> to hold your slot.</p>
-
-<p><strong>Reply RESCHEDULE</strong> if something broke. I'd rather move it than have an empty chair.</p>
+${confirmActionsHtml('if something broke. I\'d rather move it than have an empty chair.', 'Reply YES to hold your slot.')}
 
 <p>David<br>
 Elystra</p>
@@ -272,9 +274,7 @@ We're on for ${time} today. Quick number: one agency on this flow pulled $14K in
 
 ${preDemoAssetText()}
 
-Reply YES to hold your slot.
-
-Reply RESCHEDULE if something broke. I'd rather move it than have an empty chair.
+${confirmActionsText('if something broke. I\'d rather move it than have an empty chair.', 'Reply YES to hold your slot.')}
 
 David
 Elystra`,
@@ -337,7 +337,7 @@ ${preDemoAssetHtml()}
 <p>Or copy this link:<br>
 <span class="muted">${demo.join_url}</span></p>
 
-<p>If timing blew up on your side, <strong>reply RESCHEDULE</strong> and I'll give your slot to someone else.</p>
+<p>If timing blew up on your side, <a href="${rescheduleUrl()}">Reschedule</a> and I'll give your slot to someone else.</p>
 
 <p class="muted">If I don't hear back, I'll assume this isn't a priority and close the file.</p>
 
@@ -352,7 +352,7 @@ ${preDemoAssetText()}
 
 Join here: ${demo.join_url}
 
-If timing blew up on your side, reply RESCHEDULE and I'll give your slot to someone else.
+If timing blew up on your side, reschedule: ${rescheduleUrl()} and I'll give your slot to someone else.
 
 If I don't hear back, I'll assume this isn't a priority and close the file.
 
@@ -363,7 +363,7 @@ Elystra`,
 
   static postNoShow(demo: Demo): EmailTemplate {
     const firstName = demo.name.split(' ')[0];
-    const rescheduleUrl = process.env.RESCHEDULE_URL || demo.join_url;
+    const rescheduleLink = rescheduleUrl();
 
     return {
       subject: `Missed you today - still worth 7 minutes?`,
@@ -374,7 +374,7 @@ Elystra`,
 
 <p>If it's still worth 7 minutes to see how 170+ agencies took control after buyer interest already existed, and what that did to close rate and collections, grab a new slot:</p>
 
-<p><a href="${rescheduleUrl}" class="cta">Pick a New Time</a></p>
+<p><a href="${rescheduleLink}" class="cta">Pick a New Time</a></p>
 
 <p>If not, I'll close the file on my end. No follow-up, no hard feelings.</p>
 
@@ -387,7 +387,7 @@ We missed each other today. These things happen.
 
 If it's still worth 7 minutes to see how 170+ agencies took control after buyer interest already existed, and what that did to close rate and collections, grab a new slot:
 
-${rescheduleUrl}
+${rescheduleLink}
 
 If not, I'll close the file on my end. No follow-up, no hard feelings.
 

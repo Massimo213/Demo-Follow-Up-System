@@ -72,12 +72,12 @@ async function notifyOwners(senderName: string, message: string, intent: string)
 }
 
 // Generate reschedule auto-reply
+function rescheduleUrl(): string {
+  return process.env.RESCHEDULE_URL || 'https://www.elystra.online/reschedule';
+}
+
 function getRescheduleReply(firstName: string): string {
-  return `${firstName}, no problem – let's find a better time.
-
-What day/time works best for you this week? The walkthrough is only 7 minutes, so pick the closest slot that works – no need to push it far out.
-
-Just text me the day and time.`;
+  return `${firstName}, no problem — pick a new time here:\n${rescheduleUrl()}`;
 }
 
 // INVARIANT: Every message must have a sender_name. No nulls, no blanks.
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
           .update({ status: 'CANCELLED' })
           .eq('id', demo.id);
         
-        autoReply = `${firstName}, understood – closing the file. If timing improves, you can always rebook: ${process.env.RESCHEDULE_URL}`;
+        autoReply = `${firstName}, understood – closing the file. If timing improves, you can always rebook:\n${rescheduleUrl()}`;
         
         console.log(`[SMS REPLY] CANCEL/CLOSE for ${demo.email}`);
       }

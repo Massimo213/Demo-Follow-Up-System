@@ -1,7 +1,7 @@
 /**
  * SMS Templates v2
  * Binary commitment. Consequence where scheduled. Infrastructure frame (infrastructural review).
- * Every message demands YES / R / A / B. No emojis.
+ * Every message demands YES + a Reschedule link. No emojis.
  */
 
 import type { Demo, MessageType } from '@/types/demo';
@@ -38,6 +38,18 @@ function preDemoAssetSmsUrgent(): string {
   return `\nIf you haven't opened the pre-demo assets yet, open them now:\n${preDemoAssetUrl()}`;
 }
 
+function rescheduleUrl(): string {
+  return process.env.RESCHEDULE_URL || 'https://www.elystra.online/reschedule';
+}
+
+function confirmSmsActions(): string {
+  return `\nReply YES to confirm.\nReschedule: ${rescheduleUrl()}`;
+}
+
+function rescheduleSmsPrompt(): string {
+  return `\nReschedule: ${rescheduleUrl()}`;
+}
+
 export class SmsTemplates {
   static getTemplate(messageType: MessageType, demo: Demo): SmsTemplate | null {
     const firstName = demo.name.split(' ')[0];
@@ -46,27 +58,27 @@ export class SmsTemplates {
 
     const templates: Partial<Record<MessageType, () => SmsTemplate>> = {
       SMS_CONFIRM: () => ({
-        body: `${firstName}, it's David from Elystra.\n${date} at ${time} - your 7-minute infrastructural review is locked.\n7 min to see if it sits under your motion.${preDemoAssetSms()}\nReply YES to confirm, or R to reschedule.`,
+        body: `${firstName}, it's David from Elystra.\n${date} at ${time} - your 7-minute infrastructural review is locked.\n7 min to see if it sits under your motion.${preDemoAssetSms()}${confirmSmsActions()}`,
       }),
 
       SMS_REMINDER: () => ({
-        body: `${firstName}, we're on in 30 minutes. Infrastructural review of your motion after buyer interest, not a product tour.${preDemoAssetSmsUrgent()}\nIf something came up, text R.`,
+        body: `${firstName}, we're on in 30 minutes. Infrastructural review of your motion after buyer interest, not a product tour.${preDemoAssetSmsUrgent()}${rescheduleSmsPrompt()}`,
       }),
 
       CONFIRM_REMINDER: () => ({
-        body: `${firstName}, we're on today at ${time} for your 7-minute Elystra infrastructural review.${preDemoAssetSms()}\nReply YES to confirm, or R to reschedule.`,
+        body: `${firstName}, we're on today at ${time} for your 7-minute Elystra infrastructural review.${preDemoAssetSms()}${confirmSmsActions()}`,
       }),
 
       EVENING_BEFORE: () => ({
-        body: `${firstName}, heads up - we're on tomorrow at ${time} for your 7-minute infrastructural review.${preDemoAssetSms()}\nReply YES to confirm, or R to move it.`,
+        body: `${firstName}, heads up - we're on tomorrow at ${time} for your 7-minute infrastructural review.${preDemoAssetSms()}${confirmSmsActions()}`,
       }),
 
       SMS_DAY_BEFORE: () => ({
-        body: `${firstName}, tomorrow at ${time} - your 7-minute infrastructural review.${preDemoAssetSms()}\nReply YES to confirm, or R to move it.`,
+        body: `${firstName}, tomorrow at ${time} - your 7-minute infrastructural review.${preDemoAssetSms()}${confirmSmsActions()}`,
       }),
 
       SMS_URGENT: () => ({
-        body: `${firstName}, I've been on for a few minutes.\n(A) Reschedule this properly or (B) close the file?\nReply A or B.`,
+        body: `${firstName}, I've been on for a few minutes.${rescheduleSmsPrompt()}\nOr reply B to close the file.`,
       }),
     };
 
