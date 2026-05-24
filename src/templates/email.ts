@@ -30,6 +30,19 @@ function formatDay(demo: Demo): string {
   return format(demoDate, 'EEEE');
 }
 
+function preDemoAssetUrl(): string {
+  return process.env.PRE_DEMO_ASSET_URL || 'https://app.elystra.online/pre-demo';
+}
+
+function preDemoAssetHtml(): string {
+  const url = preDemoAssetUrl();
+  return `<p>Before we hop on — this is 10% of what Elystra does: <a href="${url}">${url}</a></p>`;
+}
+
+function preDemoAssetText(): string {
+  return `Before we hop on — this is 10% of what Elystra does: ${preDemoAssetUrl()}`;
+}
+
 function wrapHtml(content: string): string {
   return `
 <!DOCTYPE html>
@@ -86,6 +99,8 @@ export class EmailTemplates {
 
 ${demo.join_url ? `<p><strong>Join link:</strong> <a href="${demo.join_url}">${demo.join_url}</a></p>` : ''}
 
+${preDemoAssetHtml()}
+
 <p>What we'll cover:</p>
 <p>- where your sales motion is losing control between buyer interest and collected cash</p>
 <p>- what Elystra controls after buyer interest exists</p>
@@ -107,6 +122,8 @@ I've locked ${time} for your 7-minute walkthrough.
 I'll show you where your current sales motion is leaking, and whether Elystra deserves to sit underneath it.
 
 ${demo.join_url ? `Join link: ${demo.join_url}` : ''}
+
+${preDemoAssetText()}
 
 What we'll cover:
 - where your sales motion is losing control between buyer interest and collected cash
@@ -144,6 +161,8 @@ Elystra`,
 
 ${demo.join_url ? `<p><strong>Join link:</strong> <a href="${demo.join_url}">${demo.join_url}</a></p>` : ''}
 
+${preDemoAssetHtml()}
+
 <p>What we'll cover:</p>
 <p>- where your sales motion is losing control between buyer interest and collected cash</p>
 <p>- what Elystra controls after buyer interest exists</p>
@@ -167,6 +186,8 @@ Watch a 2-minute intro before we hop on: ${loomUrl}
 I'll show you where your current sales motion is leaking, and whether Elystra deserves to sit underneath it.
 
 ${demo.join_url ? `Join link: ${demo.join_url}` : ''}
+
+${preDemoAssetText()}
 
 What we'll cover:
 - where your sales motion is losing control between buyer interest and collected cash
@@ -195,6 +216,8 @@ Elystra`,
 
 <p>7 minutes. Infrastructural review: where your sales motion loses control between buyer interest and collected cash, not a product tour.</p>
 
+${preDemoAssetHtml()}
+
 <p><strong>Reply YES</strong> to confirm.</p>
 
 <p><strong>Reply RESCHEDULE</strong> if something changed.</p>
@@ -207,6 +230,8 @@ Elystra</p>
 I'd like to know if we're still on for ${time} today so I know whether to release the slot or hold it for you.
 
 7 minutes. Infrastructural review: where your sales motion loses control between buyer interest and collected cash, not a product tour.
+
+${preDemoAssetText()}
 
 Reply YES to confirm.
 
@@ -230,6 +255,8 @@ Elystra`,
 
 <p>170+ agencies installed Elystra under the part of the sales motion where money usually leaks. That is what changed close rate, follow-up quality, and collections. 7 minutes to see if it belongs under yours.</p>
 
+${preDemoAssetHtml()}
+
 <p><strong>Reply YES</strong> to hold your slot.</p>
 
 <p><strong>Reply RESCHEDULE</strong> if something broke. I'd rather move it than have an empty chair.</p>
@@ -242,6 +269,8 @@ Elystra</p>
 We're on for ${time} today. Quick number: one agency on this flow pulled $14K in overdue invoices within 48 hours. No hiring, no extra spend.
 
 170+ agencies installed Elystra under the part of the sales motion where money usually leaks. That is what changed close rate, follow-up quality, and collections. 7 minutes to see if it belongs under yours.
+
+${preDemoAssetText()}
 
 Reply YES to hold your slot.
 
@@ -268,6 +297,8 @@ Elystra`,
 
 <p>170+ agencies installed Elystra under the part of the sale where money usually leaks. Same structural move.</p>
 
+${preDemoAssetHtml()}
+
 <p>No ask - just context before we talk. See you ${day}.</p>
 
 <p>David<br>
@@ -279,6 +310,8 @@ Before our 7-minute walkthrough on ${time}:
 
 One agency on this flow pulled $104K in overdue invoices within 48 hours. Not from hiring or spend. From taking complete control of there deals and having the right infrastructure .
 170+ agencies installed Elystra under the part of the sale where money usually leaks.
+
+${preDemoAssetText()}
 
 Just context before we talk. See you ${day}.
 
@@ -297,6 +330,8 @@ Elystra`,
 
 <p>I'm ready. This is the infrastructural review: where your motion is exposed after buyer interest exists, what Elystra controls in that stretch, and whether it deserves to sit under your process.</p>
 
+${preDemoAssetHtml()}
+
 <a href="${demo.join_url}" class="cta">Join Walkthrough</a>
 
 <p>Or copy this link:<br>
@@ -312,6 +347,8 @@ Elystra</p>
       text: `${firstName},
 
 I'm ready. This is the infrastructural review: where your motion is exposed after buyer interest exists, what Elystra controls in that stretch, and whether it deserves to sit under your process.
+
+${preDemoAssetText()}
 
 Join here: ${demo.join_url}
 
