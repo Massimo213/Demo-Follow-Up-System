@@ -10,6 +10,7 @@ import { prospectDb } from '@/lib/prospect-db';
 import type { Prospect, ProspectMessageType, ProspectMessage } from '@/types/prospect';
 import { PostDemoEmailTemplates } from '@/templates/post-demo-email';
 import { PostDemoSmsTemplates } from '@/templates/post-demo-sms';
+import { appendEmailTextFooter } from '@/lib/email-signature';
 
 let _transporter: nodemailer.Transporter | null = null;
 let _twilio: Twilio.Twilio | null = null;
@@ -87,7 +88,7 @@ export class ProspectMessagingService {
         to: recipient,
         subject: template.subject,
         html: template.html,
-        text: template.text,
+        text: appendEmailTextFooter(template.text),
         replyTo: gmailUser,
       });
 

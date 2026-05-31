@@ -19,6 +19,7 @@ import { db } from '@/lib/db';
 import type { Demo, MessageType, Message } from '@/types/demo';
 import { EmailTemplates } from '@/templates/email';
 import { SmsTemplates } from '@/templates/sms';
+import { appendEmailTextFooter } from '@/lib/email-signature';
 
 let _transporter: nodemailer.Transporter | null = null;
 let _twilio: Twilio.Twilio | null = null;
@@ -135,7 +136,7 @@ export class MessagingService {
         to: demo.email,
         subject: template.subject,
         html: template.html,
-        text: template.text,
+        text: appendEmailTextFooter(template.text),
         replyTo: gmailUser,
       });
 

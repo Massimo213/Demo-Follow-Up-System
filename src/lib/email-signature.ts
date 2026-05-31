@@ -1,9 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-import type nodemailer from 'nodemailer';
-
-export const ELYSTRA_LOGO_CID = 'elystralogo';
-
 const COMPANY_NAME = 'Elystra Systems LLC';
 const PHONE_DISPLAY = '438 527 1026';
 const PHONE_TEL = '+14385271026';
@@ -11,37 +5,29 @@ const WEBSITE = 'https://www.elystra.online';
 const WEBSITE_LABEL = 'elystra.online';
 const TAGLINE = 'Revenue sales infrastructure for agencies';
 
-/** 128px variant (~16KB) — full LogoElystra.png is 1.4MB and Gmail drops oversized inline CID images */
-export function getElystraLogoPath(): string {
-  const emailLogo = path.join(process.cwd(), 'public', 'LogoElystra-email.png');
-  if (fs.existsSync(emailLogo)) return emailLogo;
-  return path.join(process.cwd(), 'public', 'LogoElystra.png');
-}
-
-export function getElystraLogoAttachment(): NonNullable<
-  nodemailer.SendMailOptions['attachments']
-> {
-  const logoPath = getElystraLogoPath();
-  if (!fs.existsSync(logoPath)) {
-    throw new Error(`Elystra logo not found at ${logoPath}`);
+/** Public HTTPS logo — Gmail reliably loads hosted images; CID inline attachments often fail */
+export function getElystraLogoUrl(): string {
+  if (process.env.ELYSTRA_LOGO_URL?.trim()) {
+    return process.env.ELYSTRA_LOGO_URL.trim();
   }
-
-  return [
-    {
-      filename: 'elystra-logo.png',
-      path: logoPath,
-      cid: ELYSTRA_LOGO_CID,
-      contentDisposition: 'inline',
-    },
-  ];
+  if (process.env.VERCEL_URL?.trim()) {
+    return `https://${process.env.VERCEL_URL.trim()}/LogoElystra-email.png`;
+  }
+  const app = process.env.APP_URL?.trim();
+  if (app) {
+    const origin = app.startsWith('http') ? app : `https://${app}`;
+    return `${origin.replace(/\/$/, '')}/LogoElystra-email.png`;
+  }
+  return 'https://demo-follow-up-system.vercel.app/LogoElystra-email.png';
 }
 
 export function buildEmailFooterHtml(): string {
+  const logoUrl = getElystraLogoUrl();
   return `
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:28px;padding-top:20px;border-top:1px solid #e5e7eb;">
   <tr>
     <td style="width:72px;vertical-align:top;padding-right:16px;">
-      <img src="cid:${ELYSTRA_LOGO_CID}" alt="Elystra" width="64" style="display:block;border:0;max-width:64px;height:auto;" />
+      <img src="${logoUrl}" alt="Elystra" width="64" height="64" style="display:block;border:0;max-width:64px;height:auto;" />
     </td>
     <td style="vertical-align:top;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
       <div style="font-size:13px;font-weight:600;color:#111827;margin:0 0 4px;">${COMPANY_NAME}</div>
