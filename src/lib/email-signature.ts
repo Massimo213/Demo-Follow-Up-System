@@ -11,7 +11,10 @@ const WEBSITE = 'https://www.elystra.online';
 const WEBSITE_LABEL = 'elystra.online';
 const TAGLINE = 'Revenue sales infrastructure for agencies';
 
+/** 128px variant (~16KB) — full LogoElystra.png is 1.4MB and Gmail drops oversized inline CID images */
 export function getElystraLogoPath(): string {
+  const emailLogo = path.join(process.cwd(), 'public', 'LogoElystra-email.png');
+  if (fs.existsSync(emailLogo)) return emailLogo;
   return path.join(process.cwd(), 'public', 'LogoElystra.png');
 }
 
@@ -25,9 +28,10 @@ export function getElystraLogoAttachment(): NonNullable<
 
   return [
     {
-      filename: 'LogoElystra.png',
+      filename: 'elystra-logo.png',
       path: logoPath,
       cid: ELYSTRA_LOGO_CID,
+      contentDisposition: 'inline',
     },
   ];
 }
