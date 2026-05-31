@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import Twilio from 'twilio';
 import { ReplyService } from '@/services/reply.service';
 import { MessagingService } from '@/services/messaging.service';
+import { getRescheduleUrl } from '@/lib/urls';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,13 +72,8 @@ async function notifyOwners(senderName: string, message: string, intent: string)
   }
 }
 
-// Generate reschedule auto-reply
-function rescheduleUrl(): string {
-  return process.env.RESCHEDULE_URL || 'https://www.elystra.online/reschedule';
-}
-
 function getRescheduleReply(firstName: string): string {
-  return `${firstName}, no problem — pick a new time here:\n${rescheduleUrl()}`;
+  return `${firstName}, no problem — pick a new time here:\n${getRescheduleUrl()}`;
 }
 
 // INVARIANT: Every message must have a sender_name. No nulls, no blanks.
@@ -186,7 +182,7 @@ export async function POST(request: NextRequest) {
           .update({ status: 'CANCELLED' })
           .eq('id', demo.id);
         
-        autoReply = `${firstName}, understood – closing the file. If timing improves, you can always rebook:\n${rescheduleUrl()}`;
+        autoReply = `${firstName}, understood – closing the file. If timing improves, you can always rebook:\n${getRescheduleUrl()}`;
         
         console.log(`[SMS REPLY] CANCEL/CLOSE for ${demo.email}`);
       }

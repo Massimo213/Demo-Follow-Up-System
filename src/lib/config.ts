@@ -3,6 +3,8 @@
  * Env vars validated at runtime, not build time
  */
 
+import { RESCHEDULE_URL } from '@/lib/urls';
+
 function getEnv(key: string): string {
   const value = process.env[key];
   if (!value) {
@@ -53,7 +55,7 @@ export const config = {
   get app() {
     return {
       url: getEnv('APP_URL'),
-      rescheduleUrl: getEnv('RESCHEDULE_URL'),
+      rescheduleUrl: RESCHEDULE_URL,
     };
   },
 };

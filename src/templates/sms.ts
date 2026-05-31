@@ -5,6 +5,7 @@
  */
 
 import type { Demo, MessageType } from '@/types/demo';
+import { getRescheduleUrl } from '@/lib/urls';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
@@ -38,16 +39,12 @@ function preDemoAssetSmsUrgent(): string {
   return `\nIf you haven't opened the pre-demo assets yet, open them now:\n${preDemoAssetUrl()}`;
 }
 
-function rescheduleUrl(): string {
-  return process.env.RESCHEDULE_URL || 'https://www.elystra.online/reschedule';
-}
-
 function confirmSmsActions(): string {
-  return `\nReply YES to confirm.\nReschedule: ${rescheduleUrl()}`;
+  return `\nReply YES to confirm.\nReschedule: ${getRescheduleUrl()}`;
 }
 
 function rescheduleSmsPrompt(): string {
-  return `\nReschedule: ${rescheduleUrl()}`;
+  return `\nReschedule: ${getRescheduleUrl()}`;
 }
 
 export class SmsTemplates {

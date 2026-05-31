@@ -9,6 +9,7 @@ import type { Demo, MessageType } from '@/types/demo';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { wrapEmailHtml } from '@/lib/email-signature';
+import { getRescheduleUrl } from '@/lib/urls';
 
 interface EmailTemplate {
   subject: string;
@@ -44,20 +45,16 @@ function preDemoAssetText(): string {
   return `Before we hop on — this is 10% of what Elystra does: ${preDemoAssetUrl()}`;
 }
 
-function rescheduleUrl(): string {
-  return process.env.RESCHEDULE_URL || 'https://www.elystra.online/reschedule';
-}
-
 function confirmActionsHtml(rescheduleNote: string, yesPrompt = 'Reply YES to confirm.'): string {
   return `<p><strong>${yesPrompt}</strong></p>
 
-<p><a href="${rescheduleUrl()}">Reschedule</a> ${rescheduleNote}</p>`;
+<p><a href="${getRescheduleUrl()}" class="cta">Reschedule</a> ${rescheduleNote}</p>`;
 }
 
 function confirmActionsText(rescheduleNote: string, yesPrompt = 'Reply YES to confirm.'): string {
   return `${yesPrompt}
 
-Reschedule: ${rescheduleUrl()} ${rescheduleNote}`;
+Reschedule: ${getRescheduleUrl()} ${rescheduleNote}`;
 }
 
 export class EmailTemplates {
@@ -295,7 +292,7 @@ ${preDemoAssetHtml()}
 <p>Or copy this link:<br>
 <span class="muted">${demo.join_url}</span></p>
 
-<p>If timing blew up on your side, <a href="${rescheduleUrl()}">Reschedule</a> and I'll give your slot to someone else.</p>
+<p>If timing blew up on your side, <a href="${getRescheduleUrl()}" class="cta">Reschedule</a> and I'll give your slot to someone else.</p>
 
 <p class="muted">If I don't hear back, I'll assume this isn't a priority and close the file.</p>
 
@@ -308,7 +305,7 @@ ${preDemoAssetText()}
 
 Join here: ${demo.join_url}
 
-If timing blew up on your side, reschedule: ${rescheduleUrl()} and I'll give your slot to someone else.
+If timing blew up on your side, reschedule: ${getRescheduleUrl()} and I'll give your slot to someone else.
 
 If I don't hear back, I'll assume this isn't a priority and close the file.
 `,
@@ -317,7 +314,7 @@ If I don't hear back, I'll assume this isn't a priority and close the file.
 
   static postNoShow(demo: Demo): EmailTemplate {
     const firstName = demo.name.split(' ')[0];
-    const rescheduleLink = rescheduleUrl();
+    const rescheduleLink = getRescheduleUrl();
 
     return {
       subject: `Missed you today - still worth 7 minutes?`,
