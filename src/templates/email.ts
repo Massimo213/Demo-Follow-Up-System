@@ -2,12 +2,13 @@
  * Email Templates v2
  * Consequence-driven attendance frame + infrastructure identity (infrastructural review, not product tour).
  * Every email demands YES + a Reschedule link. No soft outs.
- * Signed: David, Elystra
+ * Branded footer appended via wrapEmailHtml().
  */
 
 import type { Demo, MessageType } from '@/types/demo';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
+import { wrapEmailHtml } from '@/lib/email-signature';
 
 interface EmailTemplate {
   subject: string;
@@ -59,26 +60,6 @@ function confirmActionsText(rescheduleNote: string, yesPrompt = 'Reply YES to co
 Reschedule: ${rescheduleUrl()} ${rescheduleNote}`;
 }
 
-function wrapHtml(content: string): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px; }
-    .cta { display: inline-block; background: #0066ff; color: white !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 16px 0; }
-    .cta:hover { background: #0052cc; }
-    .muted { color: #666; font-size: 14px; }
-  </style>
-</head>
-<body>
-${content}
-</body>
-</html>`;
-}
-
 export class EmailTemplates {
   static getTemplate(messageType: MessageType, demo: Demo): EmailTemplate | null {
     const templates: Partial<Record<MessageType, () => EmailTemplate>> = {
@@ -104,7 +85,7 @@ export class EmailTemplates {
 
     return {
       subject: `Locked: 7-minute Elystra walkthrough - ${time}`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>Hey ${firstName},</p>
 
 <p>I've locked <strong>${time}</strong> for your 7-minute walkthrough.</p>
@@ -123,9 +104,6 @@ ${preDemoAssetHtml()}
 <p>- whether this deserves to sit under your sales process</p>
 
 ${confirmActionsHtml('if you need a different time.')}
-
-<p>David<br>
-Elystra</p>
       `),
       text: `Hey ${firstName},
 
@@ -144,10 +122,7 @@ What we'll cover:
 - what Elystra controls after buyer interest exists
 - whether this deserves to sit under your sales process
 
-${confirmActionsText('if you need a different time.')}
-
-David
-Elystra`,
+${confirmActionsText('if you need a different time.')}`,
     };
   }
 
@@ -158,7 +133,7 @@ Elystra`,
 
     return {
       subject: `Locked: 7-minute Elystra walkthrough - ${time}`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>Hey ${firstName},</p>
 
 <p>I've locked <strong>${time}</strong> for your 7-minute walkthrough.</p>
@@ -181,9 +156,6 @@ ${preDemoAssetHtml()}
 <p>- whether this deserves to sit under your sales process</p>
 
 ${confirmActionsHtml('if you need a different time.')}
-
-<p>David<br>
-Elystra</p>
       `),
       text: `Hey ${firstName},
 
@@ -204,10 +176,7 @@ What we'll cover:
 - what Elystra controls after buyer interest exists
 - whether this deserves to sit under your sales process
 
-${confirmActionsText('if you need a different time.')}
-
-David
-Elystra`,
+${confirmActionsText('if you need a different time.')}`,
     };
   }
 
@@ -217,7 +186,7 @@ Elystra`,
 
     return {
       subject: `${firstName} - today at ${time}`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>${firstName},</p>
 
 <p>I'd like to know if we're still on for <strong>${time} today</strong> so I know whether to release the slot or hold it for you.</p>
@@ -228,8 +197,6 @@ ${preDemoAssetHtml()}
 
 ${confirmActionsHtml('if something changed.')}
 
-<p>David<br>
-Elystra</p>
       `),
       text: `${firstName},
 
@@ -240,9 +207,7 @@ I'd like to know if we're still on for ${time} today so I know whether to releas
 ${preDemoAssetText()}
 
 ${confirmActionsText('if something changed.')}
-
-David
-Elystra`,
+`,
     };
   }
 
@@ -252,7 +217,7 @@ Elystra`,
 
     return {
       subject: `${firstName} - today at ${time}`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>${firstName},</p>
 
 <p>We're on for <strong>${time} today</strong>. Quick number: one agency on this flow pulled $14K in overdue invoices within 48 hours. No hiring, no extra spend.</p>
@@ -263,8 +228,6 @@ ${preDemoAssetHtml()}
 
 ${confirmActionsHtml('if something broke. I\'d rather move it than have an empty chair.', 'Reply YES to hold your slot.')}
 
-<p>David<br>
-Elystra</p>
       `),
       text: `${firstName},
 
@@ -275,9 +238,7 @@ We're on for ${time} today. Quick number: one agency on this flow pulled $14K in
 ${preDemoAssetText()}
 
 ${confirmActionsText('if something broke. I\'d rather move it than have an empty chair.', 'Reply YES to hold your slot.')}
-
-David
-Elystra`,
+`,
     };
   }
 
@@ -288,35 +249,32 @@ Elystra`,
 
     return {
       subject: `Quick number before ${day}`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>${firstName},</p>
 
 <p>Before our 7-minute walkthrough on <strong>${time}</strong>:</p>
 
-<p>One agency on this flow pulled $14K in overdue invoices within 48 hours. Not from hiring or spend. From taking control between proposal and collected cash.</p>
+<p>One agency on this flow pulled <strong>$104K</strong> in overdue invoices within 48 hours. Not from hiring or spend. From taking complete control of their deals and having the right infrastructure in place.</p>
 
 <p>170+ agencies installed Elystra under the part of the sale where money usually leaks. Same structural move.</p>
 
 ${preDemoAssetHtml()}
 
-<p>No ask - just context before we talk. See you ${day}.</p>
+<p>Just context before we talk. See you ${day}.</p>
 
-<p>David<br>
-Elystra</p>
       `),
       text: `${firstName},
 
 Before our 7-minute walkthrough on ${time}:
 
-One agency on this flow pulled $104K in overdue invoices within 48 hours. Not from hiring or spend. From taking complete control of there deals and having the right infrastructure .
-170+ agencies installed Elystra under the part of the sale where money usually leaks.
+One agency on this flow pulled $104K in overdue invoices within 48 hours. Not from hiring or spend. From taking complete control of their deals and having the right infrastructure in place.
+
+170+ agencies installed Elystra under the part of the sale where money usually leaks. Same structural move.
 
 ${preDemoAssetText()}
 
 Just context before we talk. See you ${day}.
-
-David
-Elystra`,
+`,
     };
   }
 
@@ -325,7 +283,7 @@ Elystra`,
 
     return {
       subject: `Join link : 7-minute walkthrough starting now`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>${firstName},</p>
 
 <p>I'm ready. This is the infrastructural review: where your motion is exposed after buyer interest exists, what Elystra controls in that stretch, and whether it deserves to sit under your process.</p>
@@ -341,8 +299,6 @@ ${preDemoAssetHtml()}
 
 <p class="muted">If I don't hear back, I'll assume this isn't a priority and close the file.</p>
 
-<p>David<br>
-Elystra</p>
       `),
       text: `${firstName},
 
@@ -355,9 +311,7 @@ Join here: ${demo.join_url}
 If timing blew up on your side, reschedule: ${rescheduleUrl()} and I'll give your slot to someone else.
 
 If I don't hear back, I'll assume this isn't a priority and close the file.
-
-David
-Elystra`,
+`,
     };
   }
 
@@ -367,7 +321,7 @@ Elystra`,
 
     return {
       subject: `Missed you today - still worth 7 minutes?`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>${firstName},</p>
 
 <p>We missed each other today. These things happen.</p>
@@ -378,8 +332,6 @@ Elystra`,
 
 <p>If not, I'll close the file on my end. No follow-up, no hard feelings.</p>
 
-<p>David<br>
-Elystra</p>
       `),
       text: `${firstName},
 
@@ -390,9 +342,7 @@ If it's still worth 7 minutes to see how 170+ agencies took control after buyer 
 ${rescheduleLink}
 
 If not, I'll close the file on my end. No follow-up, no hard feelings.
-
-David
-Elystra`,
+`,
     };
   }
 }
