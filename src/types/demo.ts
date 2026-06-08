@@ -35,6 +35,9 @@ export type MessageType =
 /** Organizer / payout rail — set only via Massimo-only API */
 export type PqadVerdict = 'pending' | 'yes' | 'no';
 
+/** Focus metric the prospect wants to improve — captured via commitment ladder */
+export type FocusMetric = 'close_rate' | 'deal_size' | 'follow_up' | null;
+
 export interface Demo {
   id: string;
   calendly_event_id: string;
@@ -51,6 +54,8 @@ export interface Demo {
   joined_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Focus metric captured from commitment ladder — close rate, deal size, or follow-up */
+  focus_metric?: FocusMetric;
   /** Organizer rail — present after migration 011 */
   organizer_booked_by?: string;
   pqad_verdict?: PqadVerdict;

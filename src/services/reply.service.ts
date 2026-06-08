@@ -6,17 +6,54 @@
 import { db } from '@/lib/db';
 import { DemoService } from './demo.service';
 import { SchedulerService } from './scheduler.service';
-import type { Demo, Reply } from '@/types/demo';
+import type { Demo, Reply, FocusMetric } from '@/types/demo';
 
-type ParsedIntent = 'YES' | 'RESCHEDULE' | 'SOONER' | '1' | '2' | 'UNKNOWN';
+type ParsedIntent = 'YES' | 'RESCHEDULE' | 'SOONER' | '1' | '2' | 'FOCUS_METRIC' | 'UNKNOWN';
+
+/** Focus metric values from commitment ladder */
+type ParsedFocusMetric = 'close_rate' | 'deal_size' | 'follow_up' | null;
 
 /** Inbound Twilio SMS → automation intents (full body scanned, not truncated). */
 export type SmsParsedIntent = 'YES' | 'STOP' | 'RESCHEDULE' | 'CLOSE' | 'CANCEL' | 'UNKNOWN';
 
 export class ReplyService {
   /**
+   * Parse focus metric from reply body (commitment ladder response)
+   * Returns the metric if detected, null otherwise
+   */
+  static parseFocusMetric(body: string): ParsedFocusMetric {
+    const normalized = body.trim().toLowerCase();
+
+    // Close rate patterns
+    if (/\b(close rate|close-rate|closerate|closing rate|conversion|conversion rate|win rate)\b/i.test(normalized)) {
+      return 'close_rate';
+    }
+    if (/^(close|closing|conversion|win)$/i.test(normalized)) {
+      return 'close_rate';
+    }
+
+    // Deal size patterns
+    if (/\b(deal size|deal-size|dealsize|average deal|avg deal|ticket size|contract size|revenue per deal)\b/i.test(normalized)) {
+      return 'deal_size';
+    }
+    if (/^(deal|deals|size|average|ticket)$/i.test(normalized)) {
+      return 'deal_size';
+    }
+
+    // Follow-up patterns
+    if (/\b(follow up|follow-up|followup|follow ups|following up|pipeline|pipeline velocity|speed|time to close)\b/i.test(normalized)) {
+      return 'follow_up';
+    }
+    if (/^(follow|followup|pipeline|velocity|speed)$/i.test(normalized)) {
+      return 'follow_up';
+    }
+
+    return null;
+  }
+
+  /**
    * Parse SMS reply intent using the entire message (any length).
-   * Order: STOP → short codes → keyword scans on full text.
+   * Order: STOP → focus metric → short codes → keyword scans on full text.
    */
   static parseSmsIntent(body: string): SmsParsedIntent {
     const raw = body.trim();
@@ -81,9 +118,17 @@ export class ReplyService {
 
   /**
    * Parse intent from reply body
+   * Now includes focus metric detection for commitment ladder
    */
   static parseIntent(body: string): ParsedIntent {
     const normalized = body.trim().toLowerCase();
+
+    // FOCUS METRIC patterns (commitment ladder responses) — check first
+    // These are valuable engagement signals and implicitly confirm interest
+    const focusMetric = this.parseFocusMetric(body);
+    if (focusMetric) {
+      return 'FOCUS_METRIC';
+    }
 
     // YES patterns
     if (/^(yes|yep|yeah|yup|y|confirm|confirmed|i'?m in|count me in|see you|sounds good|perfect|great|ok|okay|good|👍|✓|✔)$/i.test(normalized)) {
@@ -144,8 +189,8 @@ export class ReplyService {
       return { demo: null, intent, action: 'NO_DEMO_FOUND' };
     }
 
-    // Execute the action
-    const action = await this.executeIntent(demo, intent);
+    // Execute the action (pass body for focus metric extraction)
+    const action = await this.executeIntent(demo, intent, body);
 
     return { demo, intent, action };
   }
@@ -153,10 +198,13 @@ export class ReplyService {
   /**
    * Execute action based on intent
    */
-  static async executeIntent(demo: Demo, intent: ParsedIntent): Promise<string> {
+  static async executeIntent(demo: Demo, intent: ParsedIntent, replyBody?: string): Promise<string> {
     switch (intent) {
       case 'YES':
         return this.handleConfirmation(demo);
+
+      case 'FOCUS_METRIC':
+        return this.handleFocusMetric(demo, replyBody || '');
 
       case 'RESCHEDULE':
         return this.handleReschedule(demo);
@@ -179,6 +227,25 @@ export class ReplyService {
     await DemoService.updateStatus(demo.id, 'CONFIRMED');
     console.log(`Demo ${demo.id} confirmed by ${demo.email}`);
     return 'CONFIRMED';
+  }
+
+  /**
+   * Handle FOCUS_METRIC response (commitment ladder engagement)
+   * This is an implicit confirmation + valuable data capture
+   */
+  static async handleFocusMetric(demo: Demo, replyBody: string): Promise<string> {
+    const focusMetric = this.parseFocusMetric(replyBody);
+    
+    if (focusMetric) {
+      // Update the demo with the focus metric
+      await DemoService.updateFocusMetric(demo.id, focusMetric);
+      // Also mark as confirmed — they're engaged
+      await DemoService.updateStatus(demo.id, 'CONFIRMED');
+      console.log(`Demo ${demo.id} focus_metric set to ${focusMetric} by ${demo.email}`);
+      return `FOCUS_METRIC_${focusMetric.toUpperCase()}`;
+    }
+    
+    return 'FOCUS_METRIC_PARSE_FAILED';
   }
 
   /**

@@ -1,10 +1,17 @@
 /**
- * Scheduler Service v3
- * Reduced, sharp follow-up sequences
+ * Scheduler Service v4
+ * Commitment ladder system — escalating engagement, not passive reminders.
  *
- * SAME_DAY (<4h): 3 touches — email confirm, SMS 30m, join link 10m
- * NEXT_DAY:       4 touches — confirm, T-4h reminder (email/SMS), SMS 30m, join link
- * FUTURE:         5 touches — confirm, T-24h SMS, T-4h value bomb, SMS 30m, join link
+ * PRINCIPLES:
+ * - Reschedule link only on same-day touches (30-min + join link)
+ * - No consequence threats — scarcity stated once in confirmation, then silence
+ * - Asset line mutates each touch — never wallpaper
+ * - Each touch extracts investment, not just asks for "YES"
+ *
+ * SEQUENCES:
+ * SAME_DAY (<4h): 3 touches — email confirm (ask number), SMS 30m (reschedule ok), join link (reschedule ok)
+ * NEXT_DAY:       4 touches — confirm (ask number), T-4h reminder (no reschedule), SMS 30m, join link
+ * FUTURE:         5 touches — confirm (ask number), T-24h SMS (re-ask), T-4h value (reference their number), SMS 30m, join link
  */
 
 import { db } from '@/lib/db';

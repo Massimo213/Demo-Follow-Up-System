@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/lib/db';
-import type { Demo, DemoType, DemoStatus, CalendlyEvent } from '@/types/demo';
+import type { Demo, DemoType, DemoStatus, CalendlyEvent, FocusMetric } from '@/types/demo';
 import { differenceInHours } from 'date-fns';
 
 export class DemoService {
@@ -119,6 +119,13 @@ export class DemoService {
     return this.updateStatus(id, 'COMPLETED', {
       joined_at: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Update demo focus metric (commitment ladder response)
+   */
+  static async updateFocusMetric(id: string, focusMetric: FocusMetric): Promise<Demo> {
+    return db.demos.updateFocusMetric(id, focusMetric);
   }
 
   /**

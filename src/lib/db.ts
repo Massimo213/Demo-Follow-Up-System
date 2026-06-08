@@ -16,6 +16,7 @@ import type {
   DemoStatus,
   MessageType,
   PqadVerdict,
+  FocusMetric,
 } from '@/types/demo';
 
 let _db: SupabaseClient | null = null;
@@ -175,6 +176,17 @@ export const db = {
     ): Promise<Demo> {
       const { data, error } = await table('demos')
         .update({ status, ...extra })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data as Demo;
+    },
+
+    async updateFocusMetric(id: string, focusMetric: FocusMetric): Promise<Demo> {
+      const { data, error } = await table('demos')
+        .update({ focus_metric: focusMetric })
         .eq('id', id)
         .select()
         .single();
