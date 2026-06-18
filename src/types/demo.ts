@@ -66,6 +66,10 @@ export interface Demo {
   pqad_decided_at?: string | null;
   /** Private notes — Massimo organizer UI only */
   organizer_personal_notes?: string;
+  /** Organizer-captured pipeline numbers — editable even when pqad_locked */
+  proposals_per_month?: number | null;
+  avg_deal_size?: number | null;
+  close_rate?: number | null;
 }
 
 export interface ScheduledJob {

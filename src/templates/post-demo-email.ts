@@ -6,45 +6,12 @@
 
 import type { Prospect, ProspectMessageType } from '@/types/prospect';
 import { calculateROI, formatCurrency } from '@/lib/roi-calculator';
+import { POST_DEMO_EMAIL_STYLES, wrapEmailHtml } from '@/lib/email-signature';
 
 interface EmailTemplate {
   subject: string;
   html: string;
   text: string;
-}
-
-function wrapHtml(content: string): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px; }
-    .cta { display: inline-block; background: #0066ff; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; font-size: 15px; }
-    .cta:hover { background: #0052cc; }
-    .muted { color: #666; font-size: 14px; }
-    .numbers-box { background: #f8f9fa; border-left: 4px solid #0066ff; padding: 16px 20px; margin: 20px 0; border-radius: 0 6px 6px 0; }
-    .numbers-box strong { color: #0066ff; }
-    .gap-box { background: #fff3f3; border-left: 4px solid #e53e3e; padding: 16px 20px; margin: 20px 0; border-radius: 0 6px 6px 0; }
-    .gap-box strong { color: #e53e3e; }
-    .result-box { background: #f0fff4; border-left: 4px solid #38a169; padding: 16px 20px; margin: 20px 0; border-radius: 0 6px 6px 0; }
-    .forward-block { background: #f8f9fa; border: 1px solid #e2e8f0; padding: 20px; margin: 20px 0; font-style: italic; border-radius: 6px; }
-    table.delta { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
-    table.delta th, table.delta td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    table.delta th { background: #f8f9fa; font-weight: 600; }
-    .result-box strong { color: #38a169; }
-    ul.recap { margin: 12px 0; padding-left: 20px; }
-    ul.recap li { margin: 6px 0; }
-    h3 { font-size: 16px; margin: 24px 0 12px; color: #1a1a1a; }
-    hr.sep { border: none; border-top: 1px solid #ddd; margin: 24px 0; }
-  </style>
-</head>
-<body>
-${content}
-</body>
-</html>`;
 }
 
 function firstName(prospect: Prospect): string {
@@ -141,9 +108,7 @@ export class PostDemoEmailTemplates {
 <p>If it only helps you claw back 1 extra serious deal/month, your net after paying us is roughly ${formatCurrency(netOneDeal)}.<br>
 At 2 extra deals/month, you're closer to ${formatCurrency(netTwoDeals)} in net lift.</p>
 
-<p>If the assessment is directionally right on your side, the next step is simple: review it internally and let us know your stand.</p>
-
-<p>-- David, Elystra</p>`;
+<p>If the assessment is directionally right on your side, the next step is simple: review it internally and let us know your stand.</p>`;
 
     const text = `Hey ${name},
 
@@ -176,13 +141,11 @@ At your ACV (~${formatCurrency(Y)}), that is roughly:
 
 If it only helps you claw back 1 extra serious deal/month, your net after paying us is roughly ${formatCurrency(netOneDeal)}. At 2 extra deals/month, you're closer to ${formatCurrency(netTwoDeals)} in net lift.
 
-If the assessment is directionally right on your side, the next step is simple: review it internally and let us know your stand.
-
--- David, Elystra`;
+If the assessment is directionally right on your side, the next step is simple: review it internally and let us know your stand.`;
 
     return {
       subject: `Revenue Infrastructure Assessment for ${name}`,
-      html: wrapHtml(html),
+      html: wrapEmailHtml(html, POST_DEMO_EMAIL_STYLES),
       text,
     };
   }
@@ -240,7 +203,7 @@ ${linkLinesText.join('\n')}
 
     return {
       subject: `Internal decision path`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>Hi ${name},</p>
 ${introHtml}
 <p>The assessment gives you the business case.<br>
@@ -261,9 +224,7 @@ The workspace gives you the live proof.</p>
 <p>If something else is holding movement up, make that clear as well so we can both attack it correctly.</p>
 
 <p>We are only driving two outcomes from here: move to activation, or tell us clearly it is a no so we close the file cleanly.</p>
-
-<p>David from Elystra</p>
-      `),
+      `, POST_DEMO_EMAIL_STYLES),
       text: `Hi ${name},${introText}
 
 The assessment gives you the business case.
@@ -281,9 +242,7 @@ If another person needs to review this with you, let us know as soon as possible
 
 If something else is holding movement up, make that clear as well so we can both attack it correctly.
 
-We are only driving two outcomes from here: move to activation, or tell us clearly it is a no so we close the file cleanly.
-
-David from Elystra`,
+We are only driving two outcomes from here: move to activation, or tell us clearly it is a no so we close the file cleanly.`,
     };
   }
 
@@ -295,7 +254,7 @@ David from Elystra`,
 
     return {
       subject: `Activate, one blocker, or we close the file`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>Hi ${name},</p>
 
 <p>You've now had the Revenue Infrastructure Assessment and the private Elystra evaluation workspace on your side for a few days.</p>
@@ -319,10 +278,7 @@ We would rather understand the real blocker than let the decision sit in silence
 <p>So the cleanest next step is this:</p>
 
 <p>reply with the single blocker, send two times for a 15-minute activation/decision call, or say pass and we close the file.</p>
-
-<p>Best,<br>
-David from Elystra</p>
-      `),
+      `, POST_DEMO_EMAIL_STYLES),
       text: `Hi ${name},
 
 You've now had the Revenue Infrastructure Assessment and the private Elystra evaluation workspace on your side for a few days.
@@ -343,10 +299,7 @@ That is the delta we are trying to create.
 
 So the cleanest next step is this:
 
-reply with the single blocker, send two times for a 15-minute activation/decision call, or say pass and we close the file.
-
-Best,
-David from Elystra`,
+reply with the single blocker, send two times for a 15-minute activation/decision call, or say pass and we close the file.`,
     };
   }
 
@@ -359,7 +312,7 @@ David from Elystra`,
 
     return {
       subject: `Closing your file, ${name}`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>${name},</p>
 
 <p>We are going to close the file on our side for now. The Infrastructure Assessment stands.</p>
@@ -371,9 +324,7 @@ David from Elystra`,
 <p><a href="${pricingLink}" class="cta">${pricingLink}</a></p>
 
 <p>If not, we leave it there cleanly.</p>
-
-<p>David from Elystra</p>
-      `),
+      `, POST_DEMO_EMAIL_STYLES),
       text: `${name},
 
 We are going to close the file on our side for now. The Infrastructure Assessment stands.
@@ -384,9 +335,7 @@ If you want to activate before we close it fully, use the link below in the next
 
 ${pricingLink}
 
-If not, we leave it there cleanly.
-
-David from Elystra`,
+If not, we leave it there cleanly.`,
     };
   }
 
@@ -399,7 +348,7 @@ David from Elystra`,
 
     return {
       subject: `Call today, ${prospect.agency_name}, ${name}`,
-      html: wrapHtml(`
+      html: wrapEmailHtml(`
 <p>Call reminder for today.</p>
 
 <p>This prospect is at the Day 2 founder call step.</p>
@@ -413,9 +362,7 @@ David from Elystra`,
 </p>
 
 <p>Action: call today — compress to activation or a named blocker. The automated Day 3 email continues the sequence.</p>
-
-<p>David from Elystra</p>
-      `),
+      `, POST_DEMO_EMAIL_STYLES),
       text: `Call reminder for today.
 
 This prospect is at the Day 2 founder call step.
@@ -426,9 +373,7 @@ This prospect is at the Day 2 founder call step.
 - Email: ${prospect.email}
 - Demo date: ${prospect.demo_date}
 
-Action: call today — compress to activation or a named blocker. The automated Day 3 email continues the sequence.
-
-David from Elystra`,
+Action: call today — compress to activation or a named blocker. The automated Day 3 email continues the sequence.`,
     };
   }
 }

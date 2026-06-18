@@ -3,9 +3,19 @@ import { z } from 'zod';
 import { isOrganizerRequest } from '@/lib/organizer-auth';
 import { db, type DemoOrganizerPatch } from '@/lib/db';
 
+const ProspectDataSchema = z.object({
+  proposals_per_month: z.number().int().min(1),
+  avg_deal_size: z.number().int().min(1),
+  close_rate: z.number().min(0).max(100),
+});
+
 const BodySchema = z.object({
   organizer_booked_by: z.string().max(500).optional(),
   organizer_personal_notes: z.string().max(20000).optional(),
+  proposals_per_month: z.number().int().min(1).nullable().optional(),
+  avg_deal_size: z.number().int().min(1).nullable().optional(),
+  close_rate: z.number().min(0).max(100).nullable().optional(),
+  prospect_data: ProspectDataSchema.optional(),
   pqad_verdict: z.enum(['pending', 'yes', 'no']).optional(),
   pqad_rejection_reason: z.string().max(2000).nullable().optional(),
   sdr_payout_cents: z.number().int().min(0).nullable().optional(),
@@ -60,6 +70,22 @@ export async function PATCH(
 
   if (b.organizer_personal_notes !== undefined) {
     patch.organizer_personal_notes = b.organizer_personal_notes;
+  }
+
+  if (b.prospect_data !== undefined) {
+    patch.proposals_per_month = b.prospect_data.proposals_per_month;
+    patch.avg_deal_size = b.prospect_data.avg_deal_size;
+    patch.close_rate = b.prospect_data.close_rate;
+  } else {
+    if (b.proposals_per_month !== undefined) {
+      patch.proposals_per_month = b.proposals_per_month;
+    }
+    if (b.avg_deal_size !== undefined) {
+      patch.avg_deal_size = b.avg_deal_size;
+    }
+    if (b.close_rate !== undefined) {
+      patch.close_rate = b.close_rate;
+    }
   }
 
   if (b.organizer_booked_by !== undefined) {

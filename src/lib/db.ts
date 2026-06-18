@@ -59,6 +59,9 @@ interface DemoInsert {
 export interface DemoOrganizerPatch {
   organizer_booked_by?: string;
   organizer_personal_notes?: string;
+  proposals_per_month?: number | null;
+  avg_deal_size?: number | null;
+  close_rate?: number | null;
   pqad_verdict?: PqadVerdict;
   pqad_rejection_reason?: string | null;
   pqad_locked?: boolean;

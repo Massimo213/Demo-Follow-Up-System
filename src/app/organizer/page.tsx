@@ -60,6 +60,20 @@ function notesPreview(text: string): string {
   return oneLine.length > 48 ? `${oneLine.slice(0, 48)}…` : oneLine;
 }
 
+function dataPreview(
+  proposals: number | null | undefined,
+  dealSize: number | null | undefined,
+  closeRate: number | null | undefined
+): string {
+  if (proposals == null && dealSize == null && closeRate == null) return '';
+  const parts: string[] = [];
+  if (proposals != null) parts.push(`${proposals}/mo`);
+  if (dealSize != null) parts.push(`$${dealSize.toLocaleString('en-US')}`);
+  if (closeRate != null) parts.push(`${closeRate}%`);
+  const line = parts.join(' · ');
+  return line.length > 48 ? `${line.slice(0, 48)}…` : line;
+}
+
 function formatDemoTimeRange(d: Demo): string {
   const tz = d.timezone?.trim() || 'UTC';
   const start = parseISO(d.scheduled_at);
@@ -85,12 +99,22 @@ export default function OrganizerDashboardPage() {
   const [notesModalDemoId, setNotesModalDemoId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
+  const [dataModalDemoId, setDataModalDemoId] = useState<string | null>(null);
+  const [dataDraft, setDataDraft] = useState({
+    proposals_per_month: '',
+    avg_deal_size: '',
+    close_rate: '',
+  });
+  const [dataSaving, setDataSaving] = useState(false);
   const [rowState, setRowState] = useState<
     Record<
       string,
       {
         organizer_booked_by: string;
         organizer_personal_notes: string;
+        proposals_per_month: string;
+        avg_deal_size: string;
+        close_rate: string;
         pqad_verdict: PqadVerdict;
         pqad_rejection_reason: string;
         sdr_payout_cents: string;
@@ -126,6 +150,10 @@ export default function OrganizerDashboardPage() {
         next[d.id] = {
           organizer_booked_by: d.organizer_booked_by ?? '',
           organizer_personal_notes: d.organizer_personal_notes ?? '',
+          proposals_per_month:
+            d.proposals_per_month != null ? String(d.proposals_per_month) : '',
+          avg_deal_size: d.avg_deal_size != null ? String(d.avg_deal_size) : '',
+          close_rate: d.close_rate != null ? String(d.close_rate) : '',
           pqad_verdict: d.pqad_verdict ?? 'pending',
           pqad_rejection_reason: d.pqad_rejection_reason ?? '',
           sdr_payout_cents: d.sdr_payout_cents != null ? String(d.sdr_payout_cents) : '',
@@ -281,6 +309,126 @@ export default function OrganizerDashboardPage() {
     }
   }
 
+  const dataModalDemo = dataModalDemoId ? demos.find((d) => d.id === dataModalDemoId) : null;
+
+  function openDataModal(demo: Demo) {
+    const st = rowState[demo.id];
+    setDataModalDemoId(demo.id);
+    setDataDraft({
+      proposals_per_month:
+        st?.proposals_per_month ??
+        (demo.proposals_per_month != null ? String(demo.proposals_per_month) : ''),
+      avg_deal_size:
+        st?.avg_deal_size ?? (demo.avg_deal_size != null ? String(demo.avg_deal_size) : ''),
+      close_rate: st?.close_rate ?? (demo.close_rate != null ? String(demo.close_rate) : ''),
+    });
+    setError(null);
+  }
+
+  function closeDataModal() {
+    setDataModalDemoId(null);
+    setDataDraft({ proposals_per_month: '', avg_deal_size: '', close_rate: '' });
+    setDataSaving(false);
+  }
+
+  async function saveData() {
+    if (!dataModalDemoId) return;
+
+    const proposals = parseInt(dataDraft.proposals_per_month.trim(), 10);
+    const dealSize = parseInt(dataDraft.avg_deal_size.trim(), 10);
+    const closeRate = parseFloat(dataDraft.close_rate.trim());
+
+    if (
+      Number.isNaN(proposals) ||
+      proposals < 1 ||
+      Number.isNaN(dealSize) ||
+      dealSize < 1 ||
+      Number.isNaN(closeRate) ||
+      closeRate < 0 ||
+      closeRate > 100
+    ) {
+      setError('All three fields are required: proposals/mo ≥ 1, deal size ≥ $1, close rate 0–100%');
+      return;
+    }
+
+    setDataSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/organizer/demos/${dataModalDemoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          prospect_data: {
+            proposals_per_month: proposals,
+            avg_deal_size: dealSize,
+            close_rate: closeRate,
+          },
+        }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((payload as { error?: string }).error ?? 'Failed to save data');
+        setDataSaving(false);
+        return;
+      }
+
+      const proposalsStr = String(proposals);
+      const dealSizeStr = String(dealSize);
+      const closeRateStr = String(closeRate);
+
+      setRowState((s) => {
+        const cur = s[dataModalDemoId];
+        if (!cur) return s;
+        return {
+          ...s,
+          [dataModalDemoId]: {
+            ...cur,
+            proposals_per_month: proposalsStr,
+            avg_deal_size: dealSizeStr,
+            close_rate: closeRateStr,
+          },
+        };
+      });
+      setDemos((list) =>
+        list.map((d) =>
+          d.id === dataModalDemoId
+            ? {
+                ...d,
+                proposals_per_month: proposals,
+                avg_deal_size: dealSize,
+                close_rate: closeRate,
+              }
+            : d
+        )
+      );
+      closeDataModal();
+    } catch {
+      setError('Failed to save data');
+      setDataSaving(false);
+    }
+  }
+
+  function rowDataPreview(st: (typeof rowState)[string] | undefined): string {
+    if (!st) return '';
+    const proposals = st.proposals_per_month.trim();
+    const dealSize = st.avg_deal_size.trim();
+    const closeRate = st.close_rate.trim();
+    if (!proposals && !dealSize && !closeRate) return '';
+    return dataPreview(
+      proposals ? parseInt(proposals, 10) : null,
+      dealSize ? parseInt(dealSize, 10) : null,
+      closeRate ? parseFloat(closeRate) : null
+    );
+  }
+
+  function hasRowData(st: (typeof rowState)[string] | undefined): boolean {
+    if (!st) return false;
+    return Boolean(
+      st.proposals_per_month.trim() || st.avg_deal_size.trim() || st.close_rate.trim()
+    );
+  }
+
   return (
     <div
       style={{
@@ -411,7 +559,7 @@ export default function OrganizerDashboardPage() {
                 width: '100%',
                 borderCollapse: 'separate',
                 borderSpacing: 0,
-                minWidth: 920,
+                minWidth: 1040,
                 background: '#0a0a0b',
               }}
             >
@@ -433,6 +581,8 @@ export default function OrganizerDashboardPage() {
                   <th style={{ ...cell, paddingTop: 14 }}>SDR ¢</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Override ¢</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Reason (if no)</th>
+                  <th style={{ ...cell, paddingTop: 14 }}>Data</th>
+                  <th style={{ ...cell, paddingTop: 14 }}>Notes</th>
                   <th style={{ ...cell, paddingTop: 14 }} />
                 </tr>
               </thead>
@@ -441,7 +591,7 @@ export default function OrganizerDashboardPage() {
                   <Fragment key={group.sortKey}>
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         style={{
                           padding: 0,
                           border: 'none',
@@ -596,6 +746,27 @@ export default function OrganizerDashboardPage() {
                                 }}
                               />
                             )}
+                          </td>
+                          <td style={{ ...cell, minWidth: 120, maxWidth: 200 }}>
+                            <button
+                              type="button"
+                              onClick={() => openDataModal(d)}
+                              title="Proposals/mo, avg deal size, close rate"
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '8px 10px',
+                                borderRadius: 8,
+                                border: '1px solid #3a3a40',
+                                background: '#141416',
+                                color: hasRowData(st) ? '#e8e8ea' : '#636366',
+                                fontSize: 12,
+                                cursor: 'pointer',
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              {hasRowData(st) ? rowDataPreview(st) : 'Add data…'}
+                            </button>
                           </td>
                           <td style={{ ...cell, minWidth: 120, maxWidth: 200 }}>
                             <button
@@ -778,9 +949,159 @@ export default function OrganizerDashboardPage() {
           </div>
         </div>
       ) : null}
+
+      {dataModalDemo ? (
+        <div
+          role="presentation"
+          onClick={() => closeDataModal()}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.65)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="data-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 420,
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#141416',
+              border: '1px solid #3a3a40',
+              borderRadius: 14,
+              boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
+            }}
+          >
+            <div
+              style={{
+                padding: '18px 20px 12px',
+                borderBottom: '1px solid #2a2a2e',
+              }}
+            >
+              <h2
+                id="data-modal-title"
+                style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#e8e8ea' }}
+              >
+                Prospect data
+              </h2>
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#8e8e93' }}>
+                {dataModalDemo.name}
+                <span style={{ color: '#636366' }}> · </span>
+                {dataModalDemo.email}
+              </p>
+            </div>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, color: '#8e8e93' }}>Proposals sent / mo</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={dataDraft.proposals_per_month}
+                  onChange={(e) =>
+                    setDataDraft((d) => ({ ...d, proposals_per_month: e.target.value }))
+                  }
+                  placeholder="e.g. 12"
+                  autoFocus
+                  style={modalInputStyle}
+                />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, color: '#8e8e93' }}>Avg deal size ($)</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={dataDraft.avg_deal_size}
+                  onChange={(e) => setDataDraft((d) => ({ ...d, avg_deal_size: e.target.value }))}
+                  placeholder="e.g. 8000"
+                  style={modalInputStyle}
+                />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, color: '#8e8e93' }}>Close rate (%)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={dataDraft.close_rate}
+                  onChange={(e) => setDataDraft((d) => ({ ...d, close_rate: e.target.value }))}
+                  placeholder="e.g. 22"
+                  style={modalInputStyle}
+                />
+              </label>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 10,
+                padding: '12px 16px 16px',
+                borderTop: '1px solid #2a2a2e',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => closeDataModal()}
+                disabled={dataSaving}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: '1px solid #3a3a40',
+                  background: 'transparent',
+                  color: '#8e8e93',
+                  fontSize: 13,
+                  cursor: dataSaving ? 'wait' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveData()}
+                disabled={dataSaving}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#0a84ff',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: dataSaving ? 'wait' : 'pointer',
+                }}
+              >
+                {dataSaving ? 'Saving…' : 'Save data'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
+
+const modalInputStyle: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '10px 12px',
+  borderRadius: 8,
+  border: '1px solid #3a3a40',
+  background: '#0a0a0b',
+  color: '#e8e8ea',
+  fontSize: 14,
+  fontFamily: 'inherit',
+};
 
 const inputStyle: React.CSSProperties = {
   width: '100%',

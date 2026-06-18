@@ -64,7 +64,7 @@ function buildHtml() {
                     <span style="color:#a5b4fc;">t.</span> <a href="tel:+15148047055" style="color:#f8fafc;text-decoration:none;">514&nbsp;804&nbsp;7055</a>
                   </div>
                   <div style="font-size:12px;color:#94a3b8;margin-top:8px;line-height:1.4;">
-                    Proposal-to-cash infrastructure for agencies — scope, send, sign, collect.
+                    Commercial infrastructure for agencies
                   </div>
                 </td>
               </tr>
