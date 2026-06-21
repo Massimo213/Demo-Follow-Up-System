@@ -17,10 +17,17 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { MessagingService } from '@/services/messaging.service';
 import { ProspectMessagingService } from '@/services/prospect-messaging.service';
+import { isTransientSendError } from '@/lib/gmail-transport';
 import type { Demo, ScheduledJob, MessageType } from '@/types/demo';
 import type { Prospect, ProspectScheduledJob, ProspectMessageType } from '@/types/prospect';
 
 export const dynamic = 'force-dynamic';
+
+// A touchpoint is retried on every cron tick after a transient failure. We stop
+// retrying only once it is this far past its scheduled time (by then it is moot).
+const TRANSIENT_EXPIRY_MS = 24 * 60 * 60 * 1000;
+// Non-transient (permanent) errors — e.g. bad recipient, template bug — give up fast.
+const PERMANENT_MAX_RETRIES = 3;
 
 function getSupabase() {
   return createClient(
@@ -198,35 +205,46 @@ async function processJobWithLock(
       message_id: message?.id 
     };
   } catch (err) {
-    // Increment retry count and release lock
+    const transient = isTransientSendError(err);
     const newRetryCount = (job.retry_count || 0) + 1;
-    const maxRetries = 3;
-    
-    if (newRetryCount >= maxRetries) {
-      // Too many failures - mark as cancelled to stop retrying
+    const ageMs = Date.now() - new Date(job.scheduled_for).getTime();
+
+    // Transient (Gmail 535 anti-abuse, rate limits, network blips): never cancel while
+    // the touchpoint is still relevant — just release the lock and retry next tick from
+    // a fresh connection/IP. Permanent errors give up after a few attempts.
+    const shouldCancel = transient
+      ? ageMs > TRANSIENT_EXPIRY_MS
+      : newRetryCount >= PERMANENT_MAX_RETRIES;
+
+    if (shouldCancel) {
       await supabase
         .from('scheduled_jobs')
-        .update({ 
+        .update({
           cancelled: true,
           processing: false,
           processing_started_at: null,
-          last_error: String(err).slice(0, 500)
+          retry_count: newRetryCount,
+          last_error: String(err).slice(0, 500),
         })
         .eq('id', job.id);
-      console.error(`[CRON:${runId}] Job ${job.id} permanently failed after ${maxRetries} retries: ${err}`);
-      return { job_id: job.id, status: 'permanently_failed', error: String(err) };
-    } else {
-      // Release lock for retry
+      const status = transient ? 'expired_after_transient_failures' : 'permanently_failed';
+      console.error(`[CRON:${runId}] Job ${job.id} ${status} (retry ${newRetryCount}): ${err}`);
+      return { job_id: job.id, status, error: String(err) };
+    }
+
+    // Release lock for retry on the next cron tick.
     await supabase
       .from('scheduled_jobs')
-        .update({ 
-          processing: false, 
-          processing_started_at: null,
-          retry_count: newRetryCount,
-          last_error: String(err).slice(0, 500)
-        })
+      .update({
+        processing: false,
+        processing_started_at: null,
+        retry_count: newRetryCount,
+        last_error: String(err).slice(0, 500),
+      })
       .eq('id', job.id);
-    }
+    console.warn(
+      `[CRON:${runId}] Job ${job.id} ${transient ? 'transient' : 'error'} retry ${newRetryCount}: ${String(err).slice(0, 160)}`
+    );
     throw err;
   }
 }
@@ -315,32 +333,39 @@ async function processProspectJobWithLock(
 
     return { job_id: job.id, status: 'sent', message_id: message?.id };
   } catch (err) {
+    const transient = isTransientSendError(err);
     const newRetryCount = (job.retry_count || 0) + 1;
-    const maxRetries = 3;
+    const ageMs = Date.now() - new Date(job.scheduled_for).getTime();
 
-    if (newRetryCount >= maxRetries) {
+    const shouldCancel = transient
+      ? ageMs > TRANSIENT_EXPIRY_MS
+      : newRetryCount >= PERMANENT_MAX_RETRIES;
+
+    if (shouldCancel) {
       await supabase
         .from('prospect_scheduled_jobs')
         .update({
           cancelled: true,
           processing: false,
           processing_started_at: null,
-          last_error: String(err).slice(0, 500),
-        })
-        .eq('id', job.id);
-      console.error(`[CRON:${runId}] Prospect job ${job.id} permanently failed after ${maxRetries} retries`);
-      return { job_id: job.id, status: 'permanently_failed', error: String(err) };
-    } else {
-      await supabase
-        .from('prospect_scheduled_jobs')
-        .update({
-          processing: false,
-          processing_started_at: null,
           retry_count: newRetryCount,
           last_error: String(err).slice(0, 500),
         })
         .eq('id', job.id);
+      const status = transient ? 'expired_after_transient_failures' : 'permanently_failed';
+      console.error(`[CRON:${runId}] Prospect job ${job.id} ${status} (retry ${newRetryCount})`);
+      return { job_id: job.id, status, error: String(err) };
     }
+
+    await supabase
+      .from('prospect_scheduled_jobs')
+      .update({
+        processing: false,
+        processing_started_at: null,
+        retry_count: newRetryCount,
+        last_error: String(err).slice(0, 500),
+      })
+      .eq('id', job.id);
     throw err;
   }
 }

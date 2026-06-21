@@ -13,34 +13,15 @@
  * 4. Set GMAIL_USER and GMAIL_APP_PASSWORD env vars
  */
 
-import nodemailer from 'nodemailer';
 import Twilio from 'twilio';
 import { db } from '@/lib/db';
 import type { Demo, MessageType, Message } from '@/types/demo';
 import { EmailTemplates } from '@/templates/email';
 import { SmsTemplates } from '@/templates/sms';
 import { appendEmailTextFooter } from '@/lib/email-signature';
+import { sendMailWithRetry } from '@/lib/gmail-transport';
 
-let _transporter: nodemailer.Transporter | null = null;
 let _twilio: Twilio.Twilio | null = null;
-
-function getGmailTransporter(): nodemailer.Transporter {
-  if (_transporter) return _transporter;
-  
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  
-  if (!user || !pass) {
-    throw new Error('GMAIL_USER or GMAIL_APP_PASSWORD not configured');
-  }
-  
-  _transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-  });
-  
-  return _transporter;
-}
 
 function getTwilio(): Twilio.Twilio {
   if (_twilio) return _twilio;
@@ -121,17 +102,15 @@ export class MessagingService {
       return null;
     }
 
-    const gmailUser = process.env.GMAIL_USER;
+    const gmailUser = (process.env.GMAIL_USER ?? '').trim();
     if (!gmailUser) throw new Error('GMAIL_USER not configured');
 
     // Display name for "From" field
     const fromName = 'David from Elystra';
     const from = `"${fromName}" <${gmailUser}>`;
 
-    const transporter = getGmailTransporter();
-
     try {
-      const info = await transporter.sendMail({
+      const info = await sendMailWithRetry({
         from,
         to: demo.email,
         subject: template.subject,
@@ -258,7 +237,7 @@ export class MessagingService {
     senderName?: string;
     messageSid?: string;
   }): Promise<void> {
-    const gmailUser = process.env.GMAIL_USER;
+    const gmailUser = (process.env.GMAIL_USER ?? '').trim();
     if (!gmailUser) {
       console.warn('[TEAM-NOTIFY] GMAIL_USER not set, skip team email');
       return;
@@ -284,8 +263,7 @@ export class MessagingService {
     const fromName = 'Elystra Inbound';
     const from = `"${fromName}" <${gmailUser}>`;
 
-    const transporter = getGmailTransporter();
-    const info = await transporter.sendMail({
+    const info = await sendMailWithRetry({
       from,
       to,
       subject,

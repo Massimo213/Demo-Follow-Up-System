@@ -6,8 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
 import { EmailTemplates } from '@/templates/email';
+import { sendMailWithRetry } from '@/lib/gmail-transport';
 import type { Demo, MessageType } from '@/types/demo';
 
 export async function POST(request: NextRequest) {
@@ -44,28 +44,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `No template for ${messageType}` }, { status: 400 });
     }
 
-    // Send via Gmail SMTP
-    const gmailUser = process.env.GMAIL_USER;
-    const gmailPass = process.env.GMAIL_APP_PASSWORD;
-
-    if (!gmailUser || !gmailPass) {
-      return NextResponse.json({ error: 'GMAIL_USER or GMAIL_APP_PASSWORD not configured' }, { status: 500 });
+    // Send via the same hardened Gmail path used in production (retry on transient 535).
+    const gmailUser = (process.env.GMAIL_USER ?? '').trim();
+    if (!gmailUser) {
+      return NextResponse.json({ error: 'GMAIL_USER not configured' }, { status: 500 });
     }
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: gmailUser, pass: gmailPass },
-    });
 
     const fromName = 'David from Elystra';
     const from = `"${fromName}" <${gmailUser}>`;
 
-    const info = await transporter.sendMail({
+    const info = await sendMailWithRetry({
       from,
       to: email,
       subject: template.subject,
       html: template.html,
       text: template.text,
+      replyTo: gmailUser,
     });
 
     console.log('Email sent:', info.messageId);

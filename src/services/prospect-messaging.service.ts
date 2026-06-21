@@ -4,25 +4,15 @@
  * Same infrastructure (Gmail SMTP + Twilio), different templates.
  */
 
-import nodemailer from 'nodemailer';
 import Twilio from 'twilio';
 import { prospectDb } from '@/lib/prospect-db';
 import type { Prospect, ProspectMessageType, ProspectMessage } from '@/types/prospect';
 import { PostDemoEmailTemplates } from '@/templates/post-demo-email';
 import { PostDemoSmsTemplates } from '@/templates/post-demo-sms';
 import { appendEmailTextFooter } from '@/lib/email-signature';
+import { sendMailWithRetry } from '@/lib/gmail-transport';
 
-let _transporter: nodemailer.Transporter | null = null;
 let _twilio: Twilio.Twilio | null = null;
-
-function getGmailTransporter(): nodemailer.Transporter {
-  if (_transporter) return _transporter;
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  if (!user || !pass) throw new Error('GMAIL_USER or GMAIL_APP_PASSWORD not configured');
-  _transporter = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
-  return _transporter;
-}
 
 function getTwilio(): Twilio.Twilio {
   if (_twilio) return _twilio;
@@ -72,7 +62,7 @@ export class ProspectMessagingService {
       return null;
     }
 
-    const gmailUser = process.env.GMAIL_USER;
+    const gmailUser = (process.env.GMAIL_USER ?? '').trim();
     if (!gmailUser) throw new Error('GMAIL_USER not configured');
     const fromName = 'David from Elystra';
     const from = `"${fromName}" <${gmailUser}>`;
@@ -80,10 +70,8 @@ export class ProspectMessagingService {
       ? INTERNAL_TEAM_EMAIL
       : prospect.email;
 
-    const transporter = getGmailTransporter();
-
     try {
-      const info = await transporter.sendMail({
+      const info = await sendMailWithRetry({
         from,
         to: recipient,
         subject: template.subject,
