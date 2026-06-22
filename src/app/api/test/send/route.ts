@@ -13,7 +13,8 @@ import type { Demo, MessageType } from '@/types/demo';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, messageType = 'CONFIRM_INITIAL' } = body;
+    const { to, email: emailAlt, name, messageType = 'CONFIRM_INITIAL' } = body;
+    const email = to ?? emailAlt;
 
     if (!email) {
       return NextResponse.json({ error: 'email required' }, { status: 400 });
@@ -50,8 +51,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'GMAIL_USER not configured' }, { status: 500 });
     }
 
-    const fromName = 'David from Elystra';
-    const from = `"${fromName}" <${gmailUser}>`;
+    const from = `"David" <${gmailUser}>`;
 
     const info = await sendMailWithRetry({
       from,
