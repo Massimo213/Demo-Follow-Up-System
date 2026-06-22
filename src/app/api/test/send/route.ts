@@ -57,7 +57,6 @@ export async function POST(request: NextRequest) {
       from,
       to: email,
       subject: template.subject,
-      html: template.html,
       text: template.text,
       replyTo: gmailUser,
     });

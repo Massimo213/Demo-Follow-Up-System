@@ -112,7 +112,6 @@ export class MessagingService {
         from,
         to: demo.email,
         subject: template.subject,
-        html: template.html,
         text: template.text,
         replyTo: gmailUser,
       });
