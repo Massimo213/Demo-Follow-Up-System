@@ -76,6 +76,28 @@ ${buildEmailFooterHtml()}
 </html>`;
 }
 
+/**
+ * Minimal personal HTML wrapper — no logo, no company table, no social-proof line.
+ * Use for transactional emails that should look like a personal message from David.
+ * Marketing footers trigger Gmail's Promotions/Spam classifier even on clean copy.
+ */
+export function wrapEmailHtmlClean(content: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+${BASE_EMAIL_STYLES}
+  </style>
+</head>
+<body>
+${content}
+</body>
+</html>`;
+}
+
 export function appendEmailTextFooter(text: string): string {
   const trimmed = text.trimEnd();
   return `${trimmed}\n\n${buildEmailFooterText()}`;

@@ -18,7 +18,7 @@ import { db } from '@/lib/db';
 import type { Demo, MessageType, Message } from '@/types/demo';
 import { EmailTemplates } from '@/templates/email';
 import { SmsTemplates } from '@/templates/sms';
-import { appendEmailTextFooter } from '@/lib/email-signature';
+
 import { sendMailWithRetry } from '@/lib/gmail-transport';
 
 let _twilio: Twilio.Twilio | null = null;
@@ -105,9 +105,7 @@ export class MessagingService {
     const gmailUser = (process.env.GMAIL_USER ?? '').trim();
     if (!gmailUser) throw new Error('GMAIL_USER not configured');
 
-    // Display name for "From" field
-    const fromName = 'David from Elystra';
-    const from = `"${fromName}" <${gmailUser}>`;
+    const from = `"David" <${gmailUser}>`;
 
     try {
       const info = await sendMailWithRetry({
@@ -115,7 +113,7 @@ export class MessagingService {
         to: demo.email,
         subject: template.subject,
         html: template.html,
-        text: appendEmailTextFooter(template.text),
+        text: template.text,
         replyTo: gmailUser,
       });
 
@@ -260,8 +258,7 @@ export class MessagingService {
       opts.body
     )}</pre>${meta ? `<p style="color:#666;font-size:12px">${escapeHtml(meta).replace(/\n/g, '<br/>')}</p>` : ''}`;
 
-    const fromName = 'Elystra Inbound';
-    const from = `"${fromName}" <${gmailUser}>`;
+    const from = `"Elystra Inbound" <${gmailUser}>`;
 
     const info = await sendMailWithRetry({
       from,

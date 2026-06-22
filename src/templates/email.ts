@@ -8,7 +8,7 @@
 import type { Demo, MessageType } from '@/types/demo';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { wrapEmailHtml } from '@/lib/email-signature';
+import { wrapEmailHtmlClean } from '@/lib/email-signature';
 import { getRescheduleUrl } from '@/lib/urls';
 
 interface EmailTemplate {
@@ -80,8 +80,8 @@ export class EmailTemplates {
     const assetUrl = preDemoAssetUrl();
 
     return {
-      subject: `Locked: your 7-minute Elystra walkthrough — ${time}`,
-      html: wrapEmailHtml(`
+      subject: `${firstName} — ${time}`,
+      html: wrapEmailHtmlClean(`
 <p>Hey ${firstName},</p>
 
 <p><strong>${time}</strong> is locked for your 7-minute walkthrough.</p>
@@ -132,7 +132,7 @@ David`,
 
     return {
       subject: `${firstName} — today at ${time}`,
-      html: wrapEmailHtml(`
+      html: wrapEmailHtmlClean(`
 <p>${firstName},</p>
 
 <p>We're on for <strong>${time} today</strong>.</p>
@@ -179,7 +179,7 @@ David`,
 
     return {
       subject: `${firstName} — one number before ${time}`,
-      html: wrapEmailHtml(`
+      html: wrapEmailHtmlClean(`
 <p>${firstName},</p>
 
 <p>Before we talk at <strong>${time}</strong>:</p>
@@ -229,7 +229,7 @@ David`,
 
     return {
       subject: `Starting now — your 7-minute walkthrough`,
-      html: wrapEmailHtml(`
+      html: wrapEmailHtmlClean(`
 <p>${firstName},</p>
 
 <p>I'm ready.</p>
@@ -278,7 +278,7 @@ David`,
 
     return {
       subject: `Missed you, ${firstName} — want to grab another?`,
-      html: wrapEmailHtml(`
+      html: wrapEmailHtmlClean(`
 <p>${firstName},</p>
 
 <p>We missed each other. Happens to everyone.</p>
