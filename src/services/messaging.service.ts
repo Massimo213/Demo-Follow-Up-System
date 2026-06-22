@@ -19,7 +19,7 @@ import type { Demo, MessageType, Message } from '@/types/demo';
 import { EmailTemplates } from '@/templates/email';
 import { SmsTemplates } from '@/templates/sms';
 
-import { sendMailWithRetry } from '@/lib/gmail-transport';
+import { sendMail } from '@/lib/resend-mailer';
 
 let _twilio: Twilio.Twilio | null = null;
 
@@ -102,21 +102,17 @@ export class MessagingService {
       return null;
     }
 
-    const gmailUser = (process.env.GMAIL_USER ?? '').trim();
-    if (!gmailUser) throw new Error('GMAIL_USER not configured');
-
-    const from = `"David" <${gmailUser}>`;
+    const replyTo = (process.env.GMAIL_USER ?? '').trim() || undefined;
 
     try {
-      const info = await sendMailWithRetry({
-        from,
+      const info = await sendMail({
         to: demo.email,
         subject: template.subject,
         text: template.text,
-        replyTo: gmailUser,
+        replyTo,
       });
 
-      console.log(`[MESSAGING] Email ${messageType} sent to ${demo.email}, messageId: ${info.messageId}`);
+      console.log(`[MESSAGING] Email ${messageType} sent to ${demo.email}, messageId: ${info.id}`);
 
       // Record message - DB constraint will reject if duplicate
       try {
@@ -127,7 +123,7 @@ export class MessagingService {
           recipient: demo.email,
           subject: template.subject,
           body: template.text,
-          external_id: info.messageId || null,
+          external_id: info.id || null,
         });
         return message;
       } catch (dbError: any) {
@@ -253,21 +249,14 @@ export class MessagingService {
       .join('\n');
 
     const text = `${displayPhone} said :\n\n${opts.body}${meta ? `\n\n—\n${meta}` : ''}`;
-    const html = `<p><strong>${displayPhone}</strong> said :</p><pre style="white-space:pre-wrap;font-family:system-ui,sans-serif">${escapeHtml(
-      opts.body
-    )}</pre>${meta ? `<p style="color:#666;font-size:12px">${escapeHtml(meta).replace(/\n/g, '<br/>')}</p>` : ''}`;
 
-    const from = `"Elystra Inbound" <${gmailUser}>`;
-
-    const info = await sendMailWithRetry({
-      from,
+    const info = await sendMail({
       to,
       subject,
       text,
-      html,
-      replyTo: gmailUser,
+      replyTo: gmailUser || undefined,
     });
-    console.log(`[TEAM-NOTIFY] Team email sent to ${to}, id=${info.messageId}`);
+    console.log(`[TEAM-NOTIFY] Team email sent to ${to}, id=${info.id}`);
   }
 }
 

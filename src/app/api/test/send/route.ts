@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { EmailTemplates } from '@/templates/email';
-import { sendMailWithRetry } from '@/lib/gmail-transport';
+import { sendMail } from '@/lib/resend-mailer';
 import type { Demo, MessageType } from '@/types/demo';
 
 export async function POST(request: NextRequest) {
@@ -45,29 +45,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `No template for ${messageType}` }, { status: 400 });
     }
 
-    // Send via the same hardened Gmail path used in production (retry on transient 535).
-    const gmailUser = (process.env.GMAIL_USER ?? '').trim();
-    if (!gmailUser) {
-      return NextResponse.json({ error: 'GMAIL_USER not configured' }, { status: 500 });
-    }
+    const replyTo = (process.env.GMAIL_USER ?? '').trim() || undefined;
 
-    const from = `"David" <${gmailUser}>`;
-
-    const info = await sendMailWithRetry({
-      from,
+    const info = await sendMail({
       to: email,
       subject: template.subject,
       text: template.text,
-      replyTo: gmailUser,
+      replyTo,
     });
 
-    console.log('Email sent:', info.messageId);
+    console.log('Email sent:', info.id);
 
     return NextResponse.json({
       status: 'sent',
       to: email,
       subject: template.subject,
-      messageId: info.messageId,
+      messageId: info.id,
     });
   } catch (error) {
     console.error('Send error:', error);
