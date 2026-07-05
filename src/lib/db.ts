@@ -16,6 +16,7 @@ import type {
   DemoStatus,
   MessageType,
   PqadVerdict,
+  PipelineStage,
   FocusMetric,
 } from '@/types/demo';
 
@@ -68,6 +69,12 @@ export interface DemoOrganizerPatch {
   sdr_payout_cents?: number | null;
   lieutenant_override_cents?: number | null;
   pqad_decided_at?: string | null;
+  /** Assessment link — editable even when pqad_locked */
+  assessment_link?: string | null;
+  /** Private workspace link — editable even when pqad_locked */
+  private_workspace_link?: string | null;
+  /** Pipeline stage — editable even when pqad_locked */
+  pipeline_stage?: PipelineStage;
 }
 
 // Type for job insert

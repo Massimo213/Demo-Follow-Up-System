@@ -33,7 +33,16 @@ export type MessageType =
   | 'POST_NO_SHOW';
 
 /** Organizer / payout rail — set only via Massimo-only API */
-export type PqadVerdict = 'pending' | 'yes' | 'no';
+export type PqadVerdict = 'pending' | 'yes' | 'no' | 'no_show';
+
+/** Pipeline stage for tracking deal progression after the demo */
+export type PipelineStage =
+  | 'demo_done'
+  | 'assessment_sent'
+  | 'proposal_sent'
+  | 'negotiation'
+  | 'closed_won'
+  | 'closed_lost';
 
 /** Focus metric the prospect wants to improve — captured via commitment ladder */
 export type FocusMetric = 'close_rate' | 'deal_size' | 'follow_up' | null;
@@ -70,6 +79,12 @@ export interface Demo {
   proposals_per_month?: number | null;
   avg_deal_size?: number | null;
   close_rate?: number | null;
+  /** Assessment link sent to the prospect — editable even when pqad_locked */
+  assessment_link?: string | null;
+  /** Private workspace link for the prospect — editable even when pqad_locked */
+  private_workspace_link?: string | null;
+  /** Pipeline stage tracking — editable even when pqad_locked */
+  pipeline_stage?: PipelineStage;
 }
 
 export interface ScheduledJob {

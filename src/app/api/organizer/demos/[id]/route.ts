@@ -9,6 +9,15 @@ const ProspectDataSchema = z.object({
   close_rate: z.number().min(0).max(100),
 });
 
+const PIPELINE_STAGES = [
+  'demo_done',
+  'assessment_sent',
+  'proposal_sent',
+  'negotiation',
+  'closed_won',
+  'closed_lost',
+] as const;
+
 const BodySchema = z.object({
   organizer_booked_by: z.string().max(500).optional(),
   organizer_personal_notes: z.string().max(20000).optional(),
@@ -16,10 +25,13 @@ const BodySchema = z.object({
   avg_deal_size: z.number().int().min(1).nullable().optional(),
   close_rate: z.number().min(0).max(100).nullable().optional(),
   prospect_data: ProspectDataSchema.optional(),
-  pqad_verdict: z.enum(['pending', 'yes', 'no']).optional(),
+  pqad_verdict: z.enum(['pending', 'yes', 'no', 'no_show']).optional(),
   pqad_rejection_reason: z.string().max(2000).nullable().optional(),
   sdr_payout_cents: z.number().int().min(0).nullable().optional(),
   lieutenant_override_cents: z.number().int().min(0).nullable().optional(),
+  assessment_link: z.string().url().max(2000).nullable().optional(),
+  private_workspace_link: z.string().url().max(2000).nullable().optional(),
+  pipeline_stage: z.enum(PIPELINE_STAGES).optional(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -72,6 +84,17 @@ export async function PATCH(
     patch.organizer_personal_notes = b.organizer_personal_notes;
   }
 
+  // Pipeline fields — never blocked by pqad_locked
+  if (b.assessment_link !== undefined) {
+    patch.assessment_link = b.assessment_link;
+  }
+  if (b.private_workspace_link !== undefined) {
+    patch.private_workspace_link = b.private_workspace_link;
+  }
+  if (b.pipeline_stage !== undefined) {
+    patch.pipeline_stage = b.pipeline_stage;
+  }
+
   if (b.prospect_data !== undefined) {
     patch.proposals_per_month = b.prospect_data.proposals_per_month;
     patch.avg_deal_size = b.prospect_data.avg_deal_size;
@@ -116,7 +139,14 @@ export async function PATCH(
     patch.pqad_rejection_reason = reason;
     patch.pqad_decided_at = new Date().toISOString();
     patch.sdr_payout_cents = null;
-    patch.lieutenant_override_cents = b.lieutenant_override_cents ?? null;
+    patch.lieutenant_override_cents = null;
+  } else if (b.pqad_verdict === 'no_show') {
+    patch.pqad_verdict = 'no_show';
+    patch.pqad_locked = true;
+    patch.pqad_rejection_reason = null;
+    patch.pqad_decided_at = new Date().toISOString();
+    patch.sdr_payout_cents = null;
+    patch.lieutenant_override_cents = null;
   } else if (b.pqad_verdict === 'pending') {
     patch.pqad_verdict = 'pending';
     if (b.pqad_rejection_reason !== undefined) {
