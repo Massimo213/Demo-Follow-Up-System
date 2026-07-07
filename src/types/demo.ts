@@ -85,6 +85,8 @@ export interface Demo {
   private_workspace_link?: string | null;
   /** Pipeline stage tracking — editable even when pqad_locked */
   pipeline_stage?: PipelineStage;
+  /** Flag for deals needing rescue / win-back — editable even when pqad_locked */
+  is_rescue?: boolean;
 }
 
 export interface ScheduledJob {

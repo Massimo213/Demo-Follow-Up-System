@@ -7,8 +7,10 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { enUS } from 'date-fns/locale';
 import type { Demo, PqadVerdict, PipelineStage } from '@/types/demo';
 
-type Tab = 'booked' | 'pqad' | 'pipeline';
+type Tab = 'booked' | 'pqad' | 'pipeline' | 'rescue';
 type Period = 'upcoming' | 'past';
+
+const RESCUE_COLOR = '#ff453a';
 
 const PIPELINE_STAGES: { value: PipelineStage; label: string; color: string }[] = [
   { value: 'demo_done',       label: 'Demo done',        color: '#636366' },
@@ -140,6 +142,7 @@ export default function OrganizerDashboardPage() {
         assessment_link: string;
         private_workspace_link: string;
         pipeline_stage: PipelineStage;
+        is_rescue: boolean;
         saving: boolean;
       }
     >
@@ -151,8 +154,9 @@ export default function OrganizerDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const fetchView = tab === 'pipeline' ? 'booked' : tab;
-      const fetchPeriod = tab === 'pipeline' ? 'past' : period;
+      const fetchView =
+        tab === 'pipeline' ? 'booked' : tab === 'rescue' ? 'rescue' : tab;
+      const fetchPeriod = tab === 'pipeline' || tab === 'rescue' ? 'past' : period;
       const res = await fetch(
         `/api/organizer/demos?view=${fetchView}&period=${fetchPeriod}`,
         { credentials: 'include' }
@@ -183,6 +187,7 @@ export default function OrganizerDashboardPage() {
           assessment_link: d.assessment_link ?? '',
           private_workspace_link: d.private_workspace_link ?? '',
           pipeline_stage: d.pipeline_stage ?? 'demo_done',
+          is_rescue: d.is_rescue ?? false,
           saving: false,
         };
       }
@@ -290,6 +295,35 @@ export default function OrganizerDashboardPage() {
     }
   }
 
+  async function saveRescue(demoId: string, isRescue: boolean) {
+    setRowState((s) => {
+      const cur = s[demoId];
+      if (!cur) return s;
+      return { ...s, [demoId]: { ...cur, is_rescue: isRescue } };
+    });
+    setDemos((list) =>
+      list.map((d) => (d.id === demoId ? { ...d, is_rescue: isRescue } : d))
+    );
+    try {
+      const res = await fetch(`/api/organizer/demos/${demoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_rescue: isRescue }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        setError((payload as { error?: string }).error ?? 'Failed to save rescue flag');
+        return;
+      }
+      if (tab === 'rescue' && !isRescue) {
+        setDemos((list) => list.filter((d) => d.id !== demoId));
+      }
+    } catch {
+      setError('Failed to save rescue flag');
+    }
+  }
+
   const linksModalDemo = linksModalDemoId
     ? demos.find((d) => d.id === linksModalDemoId)
     : null;
@@ -369,23 +403,37 @@ export default function OrganizerDashboardPage() {
 
   const pipelineGroups = useMemo(() => {
     if (tab !== 'pipeline') return [];
+    const rescueDemos: Demo[] = [];
     const map = new Map<PipelineStage, Demo[]>();
     for (const s of PIPELINE_STAGES) map.set(s.value, []);
     for (const d of demos) {
+      const isRescue = rowState[d.id]?.is_rescue ?? d.is_rescue ?? false;
+      if (isRescue) {
+        rescueDemos.push(d);
+        continue;
+      }
       const stage = rowState[d.id]?.pipeline_stage ?? d.pipeline_stage ?? 'demo_done';
       const list = map.get(stage) ?? [];
       list.push(d);
       map.set(stage, list);
     }
-    return PIPELINE_STAGES.map((s) => {
-      const stageDemos = map.get(s.value) ?? [];
+    const withTotals = (stageDemos: Demo[]) => {
       const totalValue = stageDemos.reduce((sum, d) => {
         const rawSize = rowState[d.id]?.avg_deal_size;
         const size = rawSize ? parseInt(rawSize, 10) : (d.avg_deal_size ?? 0);
         return sum + (Number.isNaN(size) ? 0 : size);
       }, 0);
-      return { ...s, demos: stageDemos, totalValue };
+      return { demos: stageDemos, totalValue };
+    };
+    const rescue = withTotals(rescueDemos);
+    const stages = PIPELINE_STAGES.map((s) => {
+      const stageDemos = map.get(s.value) ?? [];
+      return { ...s, ...withTotals(stageDemos) };
     });
+    return [
+      { value: 'rescue' as const, label: 'Rescue', color: RESCUE_COLOR, ...rescue },
+      ...stages,
+    ];
   }, [tab, demos, rowState]);
 
   const notesModalDemo = notesModalDemoId
@@ -592,6 +640,7 @@ export default function OrganizerDashboardPage() {
                 [
                   { value: 'booked',   label: 'All demos',   title: 'Every Calendly demo — you set PQAD manually on each row' },
                   { value: 'pqad',     label: 'PQAD = yes',  title: 'Same rows, filtered to PQAD yes only (for payouts)' },
+                  { value: 'rescue',   label: 'Rescue',      title: 'Past demos flagged for rescue / win-back' },
                   { value: 'pipeline', label: 'Pipeline',     title: 'Past demos grouped by pipeline stage — track your deals' },
                 ] as const
               ).map((t) => (
@@ -604,7 +653,14 @@ export default function OrganizerDashboardPage() {
                     padding: '8px 14px',
                     borderRadius: 8,
                     border: 'none',
-                    background: tab === t.value ? (t.value === 'pipeline' ? '#bf5af2' : '#0a84ff') : '#2a2a2e',
+                    background:
+                      tab === t.value
+                        ? t.value === 'pipeline'
+                          ? '#bf5af2'
+                          : t.value === 'rescue'
+                            ? RESCUE_COLOR
+                            : '#0a84ff'
+                        : '#2a2a2e',
                     color: '#fff',
                     fontSize: 13,
                     fontWeight: 600,
@@ -632,7 +688,7 @@ export default function OrganizerDashboardPage() {
             Sign out
           </button>
         </div>
-        {tab !== 'pipeline' && (
+        {tab !== 'pipeline' && tab !== 'rescue' && (
           <div
             style={{
               display: 'flex',
@@ -674,20 +730,30 @@ export default function OrganizerDashboardPage() {
         {tab === 'pipeline' && (
           <div style={{ padding: '10px 24px 14px', borderTop: '1px solid #1c1c1f' }}>
             <span style={{ fontSize: 12, color: '#636366' }}>
-              Past demos — drag stage to track deal progression across your pipeline
+              Past demos — update stage to track deal progression. Flag deals as{' '}
+              <strong style={{ color: RESCUE_COLOR }}>Rescue</strong> to pull them into the rescue column.
+            </span>
+          </div>
+        )}
+        {tab === 'rescue' && (
+          <div style={{ padding: '10px 24px 14px', borderTop: '1px solid #1c1c1f' }}>
+            <span style={{ fontSize: 12, color: '#636366' }}>
+              Organized list of past demos flagged for rescue / win-back attention.
             </span>
           </div>
         )}
       </header>
 
       <main style={{ padding: 24 }}>
-        {tab !== 'pipeline' && (
+        {tab !== 'pipeline' && tab !== 'rescue' && (
           <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 16, maxWidth: 820 }}>
             Every booking shows on <strong style={{ color: '#c7c7cc' }}>All demos</strong>. You manually
             set <strong style={{ color: '#c7c7cc' }}>PQAD</strong> (pending → yes or no) per row—nothing
             is guessed. <strong style={{ color: '#c7c7cc' }}>PQAD = yes</strong> is the same records,
             filtered to qualified demos for payout review. Who booked, verdict, and money live on that
-            row; lock kills argument after you save. <strong style={{ color: '#c7c7cc' }}>Upcoming</strong>{' '}
+            row; lock kills argument after you save. Toggle <strong style={{ color: RESCUE_COLOR }}>Rescue</strong>{' '}
+            on any past demo to add it to the rescue list and pipeline column.{' '}
+            <strong style={{ color: '#c7c7cc' }}>Upcoming</strong>{' '}
             / <strong style={{ color: '#c7c7cc' }}>Past demos</strong> use server time; below, rows are{' '}
             <strong style={{ color: '#c7c7cc' }}>grouped by calendar day</strong> in each invitee&apos;s
             timezone (Calendly-style).
@@ -695,12 +761,20 @@ export default function OrganizerDashboardPage() {
         )}
         {tab === 'pipeline' && (
           <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 16, maxWidth: 820 }}>
-            Track where every deal stands after the demo. Stage and links are always editable regardless
+            Track where every deal stands after the demo. The <strong style={{ color: RESCUE_COLOR }}>Rescue</strong>{' '}
+            column collects flagged deals that need win-back. Stage and links are always editable regardless
             of PQAD lock. Move a prospect forward by updating their{' '}
             <strong style={{ color: '#c7c7cc' }}>Stage</strong>, paste in their{' '}
             <strong style={{ color: '#c7c7cc' }}>Assessment</strong> and{' '}
             <strong style={{ color: '#c7c7cc' }}>Workspace</strong> links, and watch your pipeline
             compound over time.
+          </p>
+        )}
+        {tab === 'rescue' && (
+          <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 16, maxWidth: 820 }}>
+            Every demo you flag as <strong style={{ color: RESCUE_COLOR }}>Rescue</strong> lands here
+            and in the first column on the <strong style={{ color: '#c7c7cc' }}>Pipeline</strong> tab.
+            Uncheck rescue when the deal is recovered or no longer needs attention.
           </p>
         )}
         {error ? (
@@ -883,6 +957,27 @@ export default function OrganizerDashboardPage() {
                                 {hasAssessment || hasWorkspace ? 'Edit links' : 'Add links'}
                               </button>
                             </div>
+                            {/* Rescue toggle */}
+                            <label
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                marginBottom: 8,
+                                fontSize: 12,
+                                color: (st?.is_rescue ?? false) ? RESCUE_COLOR : '#636366',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={st?.is_rescue ?? false}
+                                onChange={(e) => void saveRescue(d.id, e.target.checked)}
+                                style={{ accentColor: RESCUE_COLOR, cursor: 'pointer' }}
+                              />
+                              Rescue
+                            </label>
                             {/* Stage select */}
                             <select
                               value={st?.pipeline_stage ?? 'demo_done'}
@@ -923,7 +1018,7 @@ export default function OrganizerDashboardPage() {
                 width: '100%',
                 borderCollapse: 'separate',
                 borderSpacing: 0,
-                minWidth: 1280,
+                minWidth: 1340,
                 background: '#0a0a0b',
               }}
             >
@@ -946,6 +1041,7 @@ export default function OrganizerDashboardPage() {
                   <th style={{ ...cell, paddingTop: 14 }}>Reason (if no)</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Data</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Links</th>
+                  <th style={{ ...cell, paddingTop: 14 }}>Rescue</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Stage</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Notes</th>
                   <th style={{ ...cell, paddingTop: 14 }} />
@@ -956,7 +1052,7 @@ export default function OrganizerDashboardPage() {
                   <Fragment key={group.sortKey}>
                     <tr>
                       <td
-                        colSpan={12}
+                        colSpan={13}
                         style={{
                           padding: 0,
                           border: 'none',
@@ -1150,6 +1246,16 @@ export default function OrganizerDashboardPage() {
                             >
                               {linksPreview(st) || 'Add links…'}
                             </button>
+                          </td>
+                          {/* Rescue cell — always editable, auto-saves */}
+                          <td style={{ ...cell, minWidth: 72, textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              title="Flag for rescue / win-back"
+                              checked={st?.is_rescue ?? false}
+                              onChange={(e) => void saveRescue(d.id, e.target.checked)}
+                              style={{ accentColor: RESCUE_COLOR, cursor: 'pointer', width: 16, height: 16 }}
+                            />
                           </td>
                           {/* Stage cell — always editable, auto-saves */}
                           <td style={{ ...cell, minWidth: 140 }}>

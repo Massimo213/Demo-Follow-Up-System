@@ -32,6 +32,7 @@ const BodySchema = z.object({
   assessment_link: z.string().url().max(2000).nullable().optional(),
   private_workspace_link: z.string().url().max(2000).nullable().optional(),
   pipeline_stage: z.enum(PIPELINE_STAGES).optional(),
+  is_rescue: z.boolean().optional(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -93,6 +94,9 @@ export async function PATCH(
   }
   if (b.pipeline_stage !== undefined) {
     patch.pipeline_stage = b.pipeline_stage;
+  }
+  if (b.is_rescue !== undefined) {
+    patch.is_rescue = b.is_rescue;
   }
 
   if (b.prospect_data !== undefined) {

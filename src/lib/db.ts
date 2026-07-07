@@ -75,6 +75,8 @@ export interface DemoOrganizerPatch {
   private_workspace_link?: string | null;
   /** Pipeline stage — editable even when pqad_locked */
   pipeline_stage?: PipelineStage;
+  /** Rescue flag — editable even when pqad_locked */
+  is_rescue?: boolean;
 }
 
 // Type for job insert
@@ -221,7 +223,7 @@ export const db = {
 
     /** Organizer UI: filter by PQAD view + upcoming/past (scheduled_at vs server now, UTC). */
     async listForOrganizer(
-      view: 'booked' | 'pqad',
+      view: 'booked' | 'pqad' | 'rescue',
       period: 'upcoming' | 'past'
     ): Promise<Demo[]> {
       const nowIso = new Date().toISOString();
@@ -229,8 +231,10 @@ export const db = {
 
       if (view === 'booked') {
         q = q.neq('status', 'CANCELLED');
-      } else {
+      } else if (view === 'pqad') {
         q = q.eq('pqad_verdict', 'yes');
+      } else {
+        q = q.eq('is_rescue', true).neq('status', 'CANCELLED');
       }
 
       if (period === 'upcoming') {

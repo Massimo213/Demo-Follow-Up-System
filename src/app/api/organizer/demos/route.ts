@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const view = request.nextUrl.searchParams.get('view') === 'pqad' ? 'pqad' : 'booked';
+  const viewParam = request.nextUrl.searchParams.get('view');
+  const view =
+    viewParam === 'pqad' ? 'pqad' : viewParam === 'rescue' ? 'rescue' : 'booked';
   const periodParam = request.nextUrl.searchParams.get('period');
   const period = periodParam === 'past' ? 'past' : 'upcoming';
   const demos = await db.demos.listForOrganizer(view, period);
