@@ -2,19 +2,13 @@
  * Scheduler Service v4
  * Commitment ladder system — escalating engagement, not passive reminders.
  *
- * PRINCIPLES:
- * - Reschedule link only on same-day touches (30-min + join link)
- * - No consequence threats — scarcity stated once in confirmation, then silence
- * - Asset line mutates each touch — never wallpaper
- * - Each touch extracts investment, not just asks for "YES"
- *
- * SEQUENCES:
- * SAME_DAY (<4h): 3 touches — email confirm (ask number), SMS 30m (reschedule ok), join link (reschedule ok)
- * NEXT_DAY:       4 touches — confirm (ask number), T-4h reminder (no reschedule), SMS 30m, join link
- * FUTURE:         5 touches — confirm (ask number), T-24h SMS (re-ask), T-4h value (reference their number), SMS 30m, join link
+ * Delayed ingest: reclassify demo_type from NOW, then compact missed steps
+ * (fire immediately if ideal time passed but meeting has not started).
  */
 
 import { db } from '@/lib/db';
+import { DemoService } from '@/services/demo.service';
+import { resolveStepSchedule } from '@/lib/schedule-compact';
 import type { Demo, DemoType, MessageType, ScheduledJob } from '@/types/demo';
 import { TIMING } from '@/lib/config';
 
@@ -46,48 +40,71 @@ const SEQUENCES: Record<DemoType, SequenceStep[]> = {
   ],
 };
 
+export type ScheduleSequenceResult = {
+  demo: Demo;
+  jobs: ScheduledJob[];
+  reclassified: boolean;
+  compacted: MessageType[];
+};
+
 export class SchedulerService {
   /**
-   * Schedule all jobs for a demo
+   * Schedule all jobs for a demo.
+   * Reclassifies demo_type from ingest time; compacts missed pre-meeting steps to now.
    */
-  static async scheduleSequence(demo: Demo): Promise<void> {
+  static async scheduleSequence(
+    demo: Demo,
+    opts?: { now?: Date }
+  ): Promise<ScheduleSequenceResult> {
+    const now = opts?.now ?? new Date();
+    const nowMs = now.getTime();
+    const scheduledAtMs = new Date(demo.scheduled_at).getTime();
+
+    const demoType = DemoService.classifyDemoType(new Date(demo.scheduled_at), now);
+    let reclassified = false;
+    if (demoType !== demo.demo_type) {
+      demo = await db.demos.updateDemoType(demo.id, demoType);
+      reclassified = true;
+      console.log(`[SCHEDULER] Reclassified ${demo.email} → ${demoType} (delayed ingest)`);
+    }
+
     const sequence = SEQUENCES[demo.demo_type];
-    const scheduledAt = new Date(demo.scheduled_at).getTime();
-    const now = Date.now();
+    const jobs: ScheduledJob[] = [];
+    const compacted: MessageType[] = [];
 
     for (const step of sequence) {
-      let scheduledFor: Date;
+      const resolved = resolveStepSchedule({
+        messageType: step.messageType,
+        offsetMs: step.offset,
+        scheduledAtMs,
+        nowMs,
+      });
 
-      const isImmediateMessage =
-        step.messageType === 'CONFIRM_INITIAL';
-
-      if (isImmediateMessage) {
-        scheduledFor = new Date(now + step.offset);
-      } else {
-        scheduledFor = new Date(scheduledAt + step.offset);
-      }
-
-      // Skip if in the past
-      if (scheduledFor.getTime() < now) {
-        console.log(`Skipping ${step.messageType} - in the past`);
+      if (resolved.action === 'skip') {
+        console.log(`[SCHEDULER] Skip ${step.messageType} — ${resolved.reason}`);
         continue;
       }
 
-      await this.scheduleJob(demo, step.messageType, scheduledFor);
+      if (resolved.compacted) {
+        console.log(`[SCHEDULER] Compact ${step.messageType} → now`);
+        compacted.push(step.messageType);
+      }
+
+      const job = await this.scheduleJob(demo, step.messageType, new Date(resolved.scheduledForMs));
+      jobs.push(job);
     }
+
+    return { demo, jobs, reclassified, compacted };
   }
 
-  /**
-   * Schedule a single job
-   */
   static async scheduleJob(
     demo: Demo,
     messageType: MessageType,
     scheduledFor: Date
   ): Promise<ScheduledJob> {
     console.log(`Scheduling ${messageType} for ${demo.email} at ${scheduledFor.toISOString()}`);
-    
-    const job = await db.jobs.upsert({
+
+    return db.jobs.upsert({
       demo_id: demo.id,
       qstash_message_id: null,
       message_type: messageType,
@@ -95,8 +112,6 @@ export class SchedulerService {
       executed: false,
       cancelled: false,
     });
-
-    return job;
   }
 
   static async cancelAllJobs(demoId: string): Promise<void> {
@@ -123,5 +138,10 @@ export class SchedulerService {
     }
 
     return true;
+  }
+
+  static async hasPendingJobs(demoId: string): Promise<boolean> {
+    const pending = await db.jobs.findPending(demoId);
+    return pending.length > 0;
   }
 }

@@ -11,6 +11,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { calendlySecretMisconfig } from '@/lib/calendly';
 
 export const dynamic = 'force-dynamic';
 
@@ -129,6 +130,13 @@ export async function GET() {
     // Diagnosis
     const issues: string[] = [];
     
+    if (!process.env.CALENDLY_WEBHOOK_SECRET) {
+      issues.push('CALENDLY_WEBHOOK_SECRET not set — webhook signature verification disabled');
+    }
+    const calendlyMisconfig = calendlySecretMisconfig();
+    if (calendlyMisconfig) {
+      issues.push(calendlyMisconfig);
+    }
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       issues.push('Gmail credentials not configured - emails will fail');
     }

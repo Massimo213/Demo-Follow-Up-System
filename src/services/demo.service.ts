@@ -4,16 +4,17 @@
  */
 
 import { db } from '@/lib/db';
+import { extractPhoneFromInvitee } from '@/lib/calendly';
 import type { Demo, DemoType, DemoStatus, CalendlyEvent, FocusMetric } from '@/types/demo';
 import { differenceInHours } from 'date-fns';
 import { stampIngest } from '@/lib/ingest';
+import { SchedulerService } from '@/services/scheduler.service';
 
 export class DemoService {
   /**
-   * Classify demo type based on time until scheduled
+   * Classify demo type based on time until scheduled (from ingest moment).
    */
-  static classifyDemoType(scheduledAt: Date): DemoType {
-    const now = new Date();
+  static classifyDemoType(scheduledAt: Date, now = new Date()): DemoType {
     const hoursUntilDemo = differenceInHours(scheduledAt, now);
 
     if (hoursUntilDemo <= 12) return 'SAME_DAY';
@@ -22,21 +23,38 @@ export class DemoService {
   }
 
   /**
-   * Create demo from Calendly webhook
+   * Same email books again — cancel jobs on older PENDING/CONFIRMED demos.
    */
-  static async createFromCalendly(event: CalendlyEvent): Promise<Demo> {
+  static async supersedeOlderPendingBookings(
+    email: string,
+    newEventId: string
+  ): Promise<number> {
+    const others = await db.demos.findOtherPendingByEmail(email, newEventId);
+    for (const old of others) {
+      await db.demos.updateStatus(old.id, 'RESCHEDULED');
+      await SchedulerService.cancelAllJobs(old.id);
+      console.log(`[INGEST] Superseded older booking ${old.id} (${old.email}) → RESCHEDULED`);
+    }
+    return others.length;
+  }
+
+  /**
+   * Create demo from Calendly webhook (primary ingest path).
+   */
+  static async createFromCalendly(
+    event: CalendlyEvent
+  ): Promise<{ demo: Demo; created: boolean; superseded: number }> {
     const { payload } = event;
     const scheduledAt = new Date(payload.scheduled_event.start_time);
     const demoType = this.classifyDemoType(scheduledAt);
+    const eventId = payload.scheduled_event.uuid;
 
-    // Extract phone from invitee or questions
-    let phone = payload.invitee.text_reminder_number || null;
-    if (!phone && payload.questions_and_answers) {
-      const phoneAnswer = payload.questions_and_answers.find(
-        (qa) => qa.question.toLowerCase().includes('phone')
-      );
-      if (phoneAnswer) phone = phoneAnswer.answer;
-    }
+    const superseded = await this.supersedeOlderPendingBookings(payload.invitee.email, eventId);
+
+    const phone = extractPhoneFromInvitee({
+      text_reminder_number: payload.invitee.text_reminder_number,
+      questions_and_answers: payload.questions_and_answers,
+    });
     const insertedAt = new Date();
     const ingest = stampIngest({
       scheduledAt,
@@ -53,7 +71,7 @@ export class DemoService {
 
     try {
       const demo = await db.demos.insert({
-        calendly_event_id: payload.scheduled_event.uuid,
+        calendly_event_id: eventId,
         calendly_invitee_id: payload.invitee.uuid,
         email: payload.invitee.email,
         name: payload.invitee.name,
@@ -65,49 +83,33 @@ export class DemoService {
         ...ingest,
       });
 
-      return demo;
+      return { demo, created: true, superseded };
     } catch (error: unknown) {
-      // Handle duplicate event gracefully
       const err = error as { code?: string };
       if (err.code === '23505') {
-        const existing = await this.getByCalendlyEventId(payload.scheduled_event.uuid);
-        if (existing) return existing;
+        const existing = await this.getByCalendlyEventId(eventId);
+        if (existing) return { demo: existing, created: false, superseded: 0 };
       }
       throw error;
     }
   }
 
-  /**
-   * Get demo by ID
-   */
   static async getById(id: string): Promise<Demo | null> {
     return db.demos.findById(id);
   }
 
-  /**
-   * Get demo by Calendly event ID
-   */
   static async getByCalendlyEventId(eventId: string): Promise<Demo | null> {
     return db.demos.findByCalendlyEventId(eventId);
   }
 
-  /**
-   * Get demo by email (for reply matching)
-   */
   static async getByEmail(email: string): Promise<Demo | null> {
     return db.demos.findByEmail(email);
   }
 
-  /**
-   * Get demo by phone (for SMS reply matching)
-   */
   static async getByPhone(phone: string): Promise<Demo | null> {
     return db.demos.findByPhone(phone);
   }
 
-  /**
-   * Update demo status
-   */
   static async updateStatus(
     id: string,
     status: DemoStatus,
@@ -126,25 +128,16 @@ export class DemoService {
     return db.demos.updateStatus(id, status, extra);
   }
 
-  /**
-   * Mark demo as joined (user showed up)
-   */
   static async markJoined(id: string): Promise<Demo> {
     return this.updateStatus(id, 'COMPLETED', {
       joined_at: new Date().toISOString(),
     });
   }
 
-  /**
-   * Update demo focus metric (commitment ladder response)
-   */
   static async updateFocusMetric(id: string, focusMetric: FocusMetric): Promise<Demo> {
     return db.demos.updateFocusMetric(id, focusMetric);
   }
 
-  /**
-   * Cancel demo (from Calendly webhook)
-   */
   static async cancel(calendlyEventId: string): Promise<void> {
     const demo = await this.getByCalendlyEventId(calendlyEventId);
     if (!demo) return;
@@ -152,9 +145,6 @@ export class DemoService {
     await this.updateStatus(demo.id, 'CANCELLED');
   }
 
-  /**
-   * Get demos needing no-show check
-   */
   static async getDemosForNoShowCheck(): Promise<Demo[]> {
     return db.demos.findForNoShowCheck();
   }

@@ -1,11 +1,7 @@
 /**
- * Calendly Sync Endpoint
- * Polls Calendly API for new bookings (works on free plan)
- * 
- * IDEMPOTENCY:
- * - Uses INSERT ON CONFLICT on calendly_event_id (UNIQUE constraint)
- * - Safe to call multiple times - duplicates are ignored
- * 
+ * Calendly Sync — CATCH-UP ONLY (every 5 minutes via Vercel cron).
+ * Primary ingest is POST /api/webhooks/calendly (invitee.created / invitee.canceled).
+ *
  * GET /api/sync/calendly
  */
 
@@ -15,6 +11,7 @@ import { SchedulerService } from '@/services/scheduler.service';
 import { DemoService } from '@/services/demo.service';
 import { addHours, parseISO } from 'date-fns';
 import { stampIngest } from '@/lib/ingest';
+import { extractPhoneFromInvitee } from '@/lib/calendly';
 
 export const dynamic = 'force-dynamic';
 
@@ -171,23 +168,14 @@ export async function GET() {
       const demoTime = parseISO(event.start_time);
       const demoType = DemoService.classifyDemoType(demoTime);
 
-      // Extract phone from text_reminder_number or questions
-      let phone: string | null = invitee.text_reminder_number || null;
-      if (!phone && invitee.questions_and_answers) {
-        const phoneAnswer = invitee.questions_and_answers.find(
-          (qa) => qa.question.toLowerCase().includes('phone') || 
-                  qa.question.toLowerCase().includes('cell') ||
-                  qa.question.toLowerCase().includes('mobile') ||
-                  qa.question.toLowerCase().includes('number') ||
-                  qa.question.toLowerCase().includes('sms') ||
-                  qa.question.toLowerCase().includes('text') ||
-                  qa.question.toLowerCase().includes('contact')
-        );
-        if (phoneAnswer && phoneAnswer.answer) {
-          phone = phoneAnswer.answer;
-        }
-      }
+      const phone = extractPhoneFromInvitee({
+        text_reminder_number: invitee.text_reminder_number,
+        questions_and_answers: invitee.questions_and_answers,
+      });
       const insertedAt = new Date();
+
+      await DemoService.supersedeOlderPendingBookings(invitee.email, eventUuid);
+
       const ingest = stampIngest({
         scheduledAt: demoTime,
         insertedAt,
@@ -239,16 +227,16 @@ export async function GET() {
         continue;
       }
 
-      console.log(`[SYNC:${syncId}] Created demo ${newDemo.id} for ${invitee.email}`);
+      console.log(`[SYNC:${syncId}] Created demo ${newDemo.id} for ${invitee.email} (catch-up)`);
 
-      // Schedule follow-up messages
-      await SchedulerService.scheduleSequence(newDemo);
+      const { jobs } = await SchedulerService.scheduleSequence(newDemo);
 
       results.push({
         event_id: eventUuid,
         email: invitee.email,
         scheduled_at: event.start_time,
-        demo_type: demoType
+        demo_type: demoType,
+        jobs_scheduled: jobs.length,
       });
     }
 

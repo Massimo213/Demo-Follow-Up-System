@@ -7,6 +7,9 @@ import {
 } from '@/lib/phase0-rules';
 import { isExcludedFromAnalytics } from '@/lib/demo-exclusions';
 import { ReplyService } from '@/services/reply.service';
+import { resolveStepSchedule } from '@/lib/schedule-compact';
+import { TIMING } from '@/lib/config';
+import { calendlySecretMisconfig, extractPhoneFromInvitee } from '@/lib/calendly';
 
 export type Phase0Check = { name: string; pass: boolean; detail: string };
 
@@ -118,6 +121,25 @@ export function runPhase0AdversarialChecks(nowMs = Date.now()): Phase0Check[] {
   const metricCloseRate = ReplyService.parseFocusMetric('close rate');
   const metricYesNotMetric = ReplyService.parseFocusMetric('YES');
 
+  // Delayed ingest: JOIN_LINK at T-10m missed but meeting not started → compact to now
+  const meetingMs = t0 + 20 * 60 * 1000;
+  const joinLinkMissed = resolveStepSchedule({
+    messageType: 'JOIN_LINK',
+    offsetMs: -TIMING.SAME_DAY.T_MINUS_10M,
+    scheduledAtMs: meetingMs,
+    nowMs: meetingMs - 5 * 60 * 1000,
+  });
+  const joinLinkAfterStart = resolveStepSchedule({
+    messageType: 'JOIN_LINK',
+    offsetMs: -TIMING.SAME_DAY.T_MINUS_10M,
+    scheduledAtMs: meetingMs,
+    nowMs: meetingMs + 60 * 1000,
+  });
+
+  const phoneFromQa = extractPhoneFromInvitee({
+    questions_and_answers: [{ question: 'Your mobile number', answer: '514-555-0100' }],
+  });
+
   const upcomingNoButtons = !canOrganizerCorrectAttendance(
     { status: 'PENDING', scheduled_at: new Date(t0 + 60 * 60 * 1000).toISOString() },
     t0
@@ -188,6 +210,26 @@ export function runPhase0AdversarialChecks(nowMs = Date.now()): Phase0Check[] {
       name: 'SMS "32%" parses as close_rate focus metric',
       pass: metric32pct === 'close_rate' && metricCloseRate === 'close_rate' && metricYesNotMetric === null,
       detail: `32%=${metric32pct} close rate=${metricCloseRate} YES=${metricYesNotMetric}`,
+    },
+    {
+      name: 'Missed JOIN_LINK (T-10m) compacts to now if meeting not started',
+      pass: joinLinkMissed.action === 'schedule' && joinLinkMissed.compacted === true,
+      detail: JSON.stringify(joinLinkMissed),
+    },
+    {
+      name: 'JOIN_LINK skipped once meeting has started',
+      pass: joinLinkAfterStart.action === 'skip',
+      detail: JSON.stringify(joinLinkAfterStart),
+    },
+    {
+      name: 'Phone extracted from Q&A and normalized path ready',
+      pass: phoneFromQa === '514-555-0100',
+      detail: `phone=${phoneFromQa}`,
+    },
+    {
+      name: 'Calendly webhook secret must differ from API PAT',
+      pass: calendlySecretMisconfig() === null,
+      detail: calendlySecretMisconfig() ?? 'secrets distinct or one unset',
     },
   ];
 }

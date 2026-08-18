@@ -203,6 +203,29 @@ export const db = {
       return data as Demo | null;
     },
 
+    /** Other active bookings for same email (rebook supersession). */
+    async findOtherPendingByEmail(email: string, excludeEventId: string): Promise<Demo[]> {
+      const { data, error } = await table('demos')
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .in('status', ['PENDING', 'CONFIRMED'])
+        .neq('calendly_event_id', excludeEventId)
+        .order('scheduled_at', { ascending: true });
+
+      if (error) throw error;
+      return (data as Demo[]) || [];
+    },
+
+    async updateDemoType(id: string, demoType: Demo['demo_type']): Promise<Demo> {
+      const { data, error } = await table('demos')
+        .update({ demo_type: demoType })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Demo;
+    },
+
     async findByPhone(phone: string): Promise<Demo | null> {
       const normalizedPhone = phone.replace(/\D/g, '');
       const e164 = toE164(phone);
