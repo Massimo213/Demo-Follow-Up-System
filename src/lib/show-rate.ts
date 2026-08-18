@@ -121,6 +121,51 @@ function finishRow(row: RateRow): RateRow {
   return row;
 }
 
+function rowWasAttended(d: Pick<Demo, 'status' | 'joined_at'>): boolean {
+  if (d.status === 'NO_SHOW') return false;
+  return d.status === 'COMPLETED' || !!d.joined_at;
+}
+
+/** Optimistic analytics refresh after organizer attendance PATCH. */
+export function applyAttendanceCorrectionToReport(
+  report: ShowRateReport,
+  demoId: string,
+  patch: Pick<Demo, 'status' | 'joined_at'>
+): ShowRateReport {
+  const idx = report.correction_demos.findIndex((d) => d.id === demoId);
+  if (idx < 0) return report;
+
+  const before = report.correction_demos[idx];
+  const wasAttended = rowWasAttended(before);
+  const willAttend = rowWasAttended(patch);
+
+  const headline = { ...report.headline };
+  if (!wasAttended && willAttend) {
+    headline.attended += 1;
+    if (before.status === 'NO_SHOW') headline.no_show = Math.max(0, headline.no_show - 1);
+  } else if (wasAttended && !willAttend && patch.status === 'NO_SHOW') {
+    headline.attended = Math.max(0, headline.attended - 1);
+    headline.no_show += 1;
+  }
+  finishRow(headline);
+
+  const correction_demos = report.correction_demos.map((d) =>
+    d.id === demoId
+      ? { ...d, status: patch.status, joined_at: patch.joined_at ?? null }
+      : d
+  );
+
+  const funnel = report.funnel.map((step) => {
+    if (step.key !== 'joined') return step;
+    let count = step.count;
+    if (!wasAttended && willAttend) count += 1;
+    else if (wasAttended && !willAttend && patch.status === 'NO_SHOW') count = Math.max(0, count - 1);
+    return { ...step, count };
+  });
+
+  return { ...report, headline, correction_demos, funnel };
+}
+
 function bump(row: RateRow, d: Demo, nowMs: number): void {
   row.booked += 1;
   if (d.status === 'CANCELLED') row.cancelled += 1;

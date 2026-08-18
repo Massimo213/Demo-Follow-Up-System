@@ -29,6 +29,9 @@ export async function GET(request: NextRequest) {
   }
   const report = buildShowRateReport(demos, messagesByDemo, window);
   return NextResponse.json(report, {
-    headers: { 'Cache-Control': 'no-store, max-age=0' },
+    headers: {
+      'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+      Pragma: 'no-cache',
+    },
   });
 }

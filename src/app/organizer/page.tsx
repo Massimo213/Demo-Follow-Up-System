@@ -357,7 +357,10 @@ export default function OrganizerDashboardPage() {
     }
   }
 
-  async function saveAttendance(demoId: string, attendance: 'showed' | 'no_show'): Promise<boolean> {
+  async function saveAttendance(
+    demoId: string,
+    attendance: 'showed' | 'no_show'
+  ): Promise<{ ok: boolean; demo?: Demo }> {
     setError(null);
     try {
       const res = await fetch(`/api/organizer/demos/${demoId}`, {
@@ -369,7 +372,7 @@ export default function OrganizerDashboardPage() {
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError((payload as { error?: string }).error ?? 'Failed to save attendance');
-        return false;
+        return { ok: false };
       }
       const updated = (payload as { demo?: Demo }).demo;
       if (updated) {
@@ -378,10 +381,10 @@ export default function OrganizerDashboardPage() {
         await load();
       }
       await refreshStale();
-      return true;
+      return { ok: true, demo: updated };
     } catch {
       setError('Failed to save attendance');
-      return false;
+      return { ok: false };
     }
   }
 

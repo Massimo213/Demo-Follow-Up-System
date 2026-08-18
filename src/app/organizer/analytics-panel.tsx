@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { applyAttendanceCorrectionToReport } from '@/lib/show-rate';
 import type {
   AnalyticsWindow,
   CorrectionDemo,
@@ -9,6 +10,7 @@ import type {
   ShowRateReport,
   UnresolvedDemo,
 } from '@/lib/show-rate';
+import type { Demo } from '@/types/demo';
 
 const WINDOWS: { value: AnalyticsWindow; label: string }[] = [
   { value: '7d', label: 'Last 7 days' },
@@ -34,7 +36,10 @@ const cellLeft: React.CSSProperties = { ...cell, textAlign: 'left', color: '#e8e
 export function AnalyticsPanel({
   onMarkAttendance,
 }: {
-  onMarkAttendance: (id: string, attendance: 'showed' | 'no_show') => Promise<boolean>;
+  onMarkAttendance: (
+    id: string,
+    attendance: 'showed' | 'no_show'
+  ) => Promise<{ ok: boolean; demo?: Demo }>;
 }) {
   const [window, setWindow] = useState<AnalyticsWindow>('90d');
   const [report, setReport] = useState<ShowRateReport | null>(null);
@@ -49,9 +54,10 @@ export function AnalyticsPanel({
     else setRefreshing(true);
     setError(null);
     try {
-      const res = await fetch(`/api/organizer/analytics?window=${window}`, {
+      const res = await fetch(`/api/organizer/analytics?window=${window}&_=${Date.now()}`, {
         credentials: 'include',
         cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
       });
       if (!res.ok) {
         setError('Failed to load analytics');
@@ -77,13 +83,30 @@ export function AnalyticsPanel({
     setFlash(null);
     setMarking(id);
     const beforeAttended = report?.headline.attended ?? null;
-    const ok = await onMarkAttendance(id, attendance);
-    if (!ok) {
+    const beforeRow = report?.correction_demos.find((d) => d.id === id);
+    const result = await onMarkAttendance(id, attendance);
+    if (!result.ok) {
       setFlash('Save failed — see error above.');
       setMarking(null);
       return;
     }
-    const next = await load({ silent: true });
+
+    if (result.demo && report) {
+      setReport(applyAttendanceCorrectionToReport(report, id, result.demo));
+    }
+
+    let next = await load({ silent: true });
+    if (
+      result.demo &&
+      beforeRow &&
+      beforeAttended != null &&
+      next?.headline.attended === beforeAttended &&
+      rowOutcome(beforeRow) !== rowOutcome(result.demo)
+    ) {
+      await new Promise((r) => setTimeout(r, 400));
+      next = await load({ silent: true });
+    }
+
     const afterAttended = next?.headline.attended;
     const label = attendance === 'showed' ? 'Joined' : 'No-Show';
     const delta =
@@ -316,10 +339,14 @@ function AttendanceTable({
   );
 }
 
-function outcomeLabel(d: CorrectionDemo | UnresolvedDemo): string {
-  if (d.status === 'COMPLETED' || ('joined_at' in d && d.joined_at)) return 'Joined';
+function rowOutcome(d: { status: string; joined_at?: string | null }): string {
+  if (d.status === 'COMPLETED' || d.joined_at) return 'Joined';
   if (d.status === 'NO_SHOW') return 'No-show';
   return d.status;
+}
+
+function outcomeLabel(d: CorrectionDemo | UnresolvedDemo): string {
+  return rowOutcome(d);
 }
 
 function FunnelTable({ steps }: { steps: FunnelStep[] }) {
