@@ -75,6 +75,13 @@ export function verifyCalendlyWebhookSignature(
   }
 }
 
+/** Sign a webhook body for tests (mirrors Calendly HMAC verification). */
+export function signCalendlyWebhookPayload(body: string, secret: string): string {
+  const t = Math.floor(Date.now() / 1000).toString();
+  const v1 = crypto.createHmac('sha256', secret).update(`${t}.${body}`).digest('hex');
+  return `t=${t},v1=${v1}`;
+}
+
 /** Build a synthetic invitee.created payload for tests. */
 export function buildCalendlyWebhookEvent(opts: {
   email: string;

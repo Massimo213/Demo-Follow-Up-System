@@ -1,15 +1,18 @@
 /**
- * Test booking — exercises the Calendly webhook ingest path end-to-end.
- * Pass: jobs created in under 10 seconds.
+ * Test booking — exercises the real Calendly webhook HTTP path end-to-end.
+ * Pass: jobs created in under 10 seconds via POST /api/webhooks/calendly.
  *
  * POST /api/test/book
  * { "email": "...", "name": "...", "scheduledAt": "ISO", "phone": "+1..." }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { buildCalendlyWebhookEvent } from '@/lib/calendly';
-import { CalendlyIngestService } from '@/services/calendly-ingest.service';
+import {
+  buildCalendlyWebhookEvent,
+  signCalendlyWebhookPayload,
+} from '@/lib/calendly';
 import { db } from '@/lib/db';
+import { config } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +22,17 @@ export async function POST(request: NextRequest) {
   try {
     if (process.env.NODE_ENV === 'production' && process.env.ALLOW_TEST_BOOK !== 'true') {
       return NextResponse.json({ error: 'Disabled in production' }, { status: 403 });
+    }
+
+    const secret = (process.env.CALENDLY_WEBHOOK_SECRET ?? '').trim();
+    if (!secret) {
+      return NextResponse.json(
+        {
+          error:
+            'CALENDLY_WEBHOOK_SECRET required — create a Calendly webhook subscription (Standard plan) first',
+        },
+        { status: 500 }
+      );
     }
 
     const body = await request.json();
@@ -36,11 +50,38 @@ export async function POST(request: NextRequest) {
       joinUrl,
     });
 
+    const payload = JSON.stringify(event);
+    const signature = signCalendlyWebhookPayload(payload, secret);
+    const webhookUrl = `${config.app.url.replace(/\/$/, '')}/api/webhooks/calendly`;
+
     const started = Date.now();
-    const result = await CalendlyIngestService.processInviteeCreated(event);
+    const whRes = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'calendly-webhook-signature': signature,
+      },
+      body: payload,
+    });
+    const whBody = await whRes.json().catch(() => ({}));
     const elapsed_ms = Date.now() - started;
 
-    const jobs = await db.jobs.findPending(result.demo_id);
+    if (!whRes.ok) {
+      return NextResponse.json(
+        {
+          status: 'fail',
+          ingest_path: 'webhook',
+          elapsed_ms,
+          http_status: whRes.status,
+          webhook_url: webhookUrl,
+          error: whBody,
+        },
+        { status: whRes.status }
+      );
+    }
+
+    const demoId = (whBody as { demo_id?: string }).demo_id;
+    const jobs = demoId ? await db.jobs.findPending(demoId) : [];
     const pass = elapsed_ms < PASS_MS && jobs.length > 0;
 
     return NextResponse.json({
@@ -49,13 +90,15 @@ export async function POST(request: NextRequest) {
       elapsed_ms,
       pass_threshold_ms: PASS_MS,
       pass,
-      ...result,
+      webhook_url: webhookUrl,
+      http_status: whRes.status,
+      ...whBody,
       scheduled_jobs: jobs.map((j) => ({
         message_type: j.message_type,
         scheduled_for: j.scheduled_for,
       })),
       next_step: pass
-        ? 'Jobs created — run GET /api/cron to process due messages'
+        ? 'Jobs created via real webhook HTTP — run GET /api/cron to process due messages'
         : `Expected jobs in <${PASS_MS}ms; got ${jobs.length} jobs in ${elapsed_ms}ms`,
     });
   } catch (error) {
