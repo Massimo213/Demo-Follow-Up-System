@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { DemoService } from '@/services/demo.service';
 import { SchedulerService } from '@/services/scheduler.service';
-import { differenceInHours } from 'date-fns';
+import { stampIngest } from '@/lib/ingest';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,13 +23,13 @@ export async function POST(request: NextRequest) {
 
     const scheduledDate = new Date(scheduledAt);
     const now = new Date();
-    const hoursUntil = differenceInHours(scheduledDate, now);
-
-    // Classify demo type
-    let demoType: 'SAME_DAY' | 'NEXT_DAY' | 'FUTURE';
-    if (hoursUntil <= 12) demoType = 'SAME_DAY';
-    else if (hoursUntil <= 36) demoType = 'NEXT_DAY';
-    else demoType = 'FUTURE';
+    const demoType = DemoService.classifyDemoType(scheduledDate);
+    const ingest = stampIngest({
+      scheduledAt: scheduledDate,
+      insertedAt: now,
+      path: 'test',
+      rawPhone: null,
+    });
 
     // Create demo
     const demoId = `test-${Date.now()}`;
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       demo_type: demoType,
       join_url: joinUrl || 'https://zoom.us/j/123456789',
       status: 'PENDING',
+      ...ingest,
     });
 
     console.log(`Created demo ${demo.id} (${demoType}) for ${email}`);

@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import Twilio from 'twilio';
 import { ReplyService } from '@/services/reply.service';
 import { MessagingService } from '@/services/messaging.service';
+import { DemoService } from '@/services/demo.service';
 import { getRescheduleUrl } from '@/lib/urls';
 
 export const dynamic = 'force-dynamic';
@@ -112,18 +113,11 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabase();
-    
-    // Clean phone number for lookup
-    const cleanPhone = from.replace(/[^\d+]/g, '');
-    
-    // Find demo by phone
-    const { data: demo } = await supabase
-      .from('demos')
-      .select('id, email, name, status')
-      .eq('phone', cleanPhone)
-      .order('scheduled_at', { ascending: false })
-      .limit(1)
-      .single();
+
+    const matched = await DemoService.getByPhone(from);
+    const demo = matched
+      ? { id: matched.id, email: matched.email, name: matched.name, status: matched.status }
+      : null;
 
     const intent = ReplyService.parseSmsIntent(body);
     
@@ -167,9 +161,22 @@ export async function POST(request: NextRequest) {
           .eq('id', demo.id);
         
         console.log(`[SMS REPLY] STOP - removed phone for ${demo.email}`);
-      }
-      
-      if (intent === 'CANCEL' || intent === 'CLOSE') {
+      } else {
+        const focusMetric = ReplyService.parseFocusMetric(body);
+        if (focusMetric) {
+          await supabase
+            .from('demos')
+            .update({
+              focus_metric: focusMetric,
+              status: 'CONFIRMED',
+              confirmed_at: new Date().toISOString(),
+            })
+            .eq('id', demo.id)
+            .in('status', ['PENDING', 'CONFIRMED']);
+          console.log(`[SMS REPLY] Metric ${focusMetric} + confirmed for ${demo.email}`);
+        }
+
+        if (intent === 'CANCEL' || intent === 'CLOSE') {
         // They're cancelling/closing - cancel jobs, keep phone for potential re-engagement
         await supabase
           .from('scheduled_jobs')
@@ -190,8 +197,9 @@ export async function POST(request: NextRequest) {
       if (intent === 'YES') {
         await supabase
           .from('demos')
-          .update({ status: 'CONFIRMED' })
-          .eq('id', demo.id);
+          .update({ status: 'CONFIRMED', confirmed_at: new Date().toISOString() })
+          .eq('id', demo.id)
+          .in('status', ['PENDING', 'CONFIRMED']);
         
         autoReply = `${firstName}, locked in. I'll send you the join link before we start.`;
         
@@ -214,6 +222,7 @@ export async function POST(request: NextRequest) {
         autoReply = getRescheduleReply(firstName);
         
         console.log(`[SMS REPLY] Reschedule requested for ${demo.email}`);
+      }
       }
     }
 

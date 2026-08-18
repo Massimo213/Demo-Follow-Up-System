@@ -40,8 +40,10 @@ export async function GET() {
     TWILIO_AUTH_TOKEN: !!process.env.TWILIO_AUTH_TOKEN,
     TWILIO_PHONE_NUMBER: !!process.env.TWILIO_PHONE_NUMBER,
     CALENDLY_WEBHOOK_SECRET: !!process.env.CALENDLY_WEBHOOK_SECRET,
-    APP_URL: process.env.APP_URL || 'NOT SET',
-    PRE_DEMO_ASSET_URL: process.env.PRE_DEMO_ASSET_URL || 'NOT SET',
+    CALENDLY_API_TOKEN: !!process.env.CALENDLY_API_TOKEN,
+    APP_URL: JSON.stringify((process.env.APP_URL || 'NOT SET').trim()),
+    APP_URL_raw_length: (process.env.APP_URL || '').length,
+    PRE_DEMO_ASSET_URL: (process.env.PRE_DEMO_ASSET_URL || 'NOT SET').trim(),
   };
 
   try {

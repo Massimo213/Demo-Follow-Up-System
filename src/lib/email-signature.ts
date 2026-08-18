@@ -18,7 +18,7 @@ export function getElystraLogoUrl(): string {
     const origin = app.startsWith('http') ? app : `https://${app}`;
     return `${origin.replace(/\/$/, '')}/LogoElystra-email.png`;
   }
-  return 'https://demo-follow-up-system.vercel.app/LogoElystra-email.png';
+  return 'https://demo-followup.vercel.app/LogoElystra-email.png';
 }
 
 export function buildEmailFooterHtml(): string {

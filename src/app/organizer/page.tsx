@@ -1,13 +1,16 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { addMinutes, parseISO } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { enUS } from 'date-fns/locale';
 import type { Demo, PqadVerdict, PipelineStage } from '@/types/demo';
+import { AnalyticsPanel } from './analytics-panel';
+import { isUnresolvedPast } from '@/lib/show-rate';
+import { canOrganizerCorrectAttendance, isLiveMeetingWindow } from '@/lib/phase0-rules';
 
-type Tab = 'booked' | 'pqad' | 'pipeline' | 'rescue';
+type Tab = 'booked' | 'pqad' | 'pipeline' | 'rescue' | 'analytics';
 type Period = 'upcoming' | 'past';
 
 const RESCUE_COLOR = '#ff453a';
@@ -109,7 +112,10 @@ const cell: React.CSSProperties = {
 
 export default function OrganizerDashboardPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('booked');
+  const pathname = usePathname();
+  const [tab, setTab] = useState<Tab>(() =>
+    pathname?.startsWith('/organizer/analytics') ? 'analytics' : 'booked'
+  );
   const [period, setPeriod] = useState<Period>('upcoming');
   const [demos, setDemos] = useState<Demo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,10 +153,16 @@ export default function OrganizerDashboardPage() {
       }
     >
   >({});
+  const [staleCount, setStaleCount] = useState(0);
 
   const demoGroups = useMemo(() => groupDemosByLocalDay(demos, period), [demos, period]);
 
   const load = useCallback(async () => {
+    if (tab === 'analytics') {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -201,6 +213,27 @@ export default function OrganizerDashboardPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (pathname?.startsWith('/organizer/analytics')) setTab('analytics');
+  }, [pathname]);
+
+  const refreshStale = useCallback(async () => {
+    try {
+      const res = await fetch('/api/organizer/stale', { credentials: 'include' });
+      if (!res.ok) return;
+      const payload = (await res.json()) as { count?: number };
+      setStaleCount(payload.count ?? 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshStale();
+    const t = setInterval(() => void refreshStale(), 30_000);
+    return () => clearInterval(t);
+  }, [refreshStale]);
 
   async function logout() {
     await fetch('/api/organizer/session', { method: 'DELETE', credentials: 'include' });
@@ -321,6 +354,34 @@ export default function OrganizerDashboardPage() {
       }
     } catch {
       setError('Failed to save rescue flag');
+    }
+  }
+
+  async function saveAttendance(demoId: string, attendance: 'showed' | 'no_show'): Promise<boolean> {
+    setError(null);
+    try {
+      const res = await fetch(`/api/organizer/demos/${demoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ attendance }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((payload as { error?: string }).error ?? 'Failed to save attendance');
+        return false;
+      }
+      const updated = (payload as { demo?: Demo }).demo;
+      if (updated) {
+        setDemos((list) => list.map((d) => (d.id === demoId ? { ...d, ...updated } : d)));
+      } else if (tab !== 'analytics') {
+        await load();
+      }
+      await refreshStale();
+      return true;
+    } catch {
+      setError('Failed to save attendance');
+      return false;
     }
   }
 
@@ -639,6 +700,7 @@ export default function OrganizerDashboardPage() {
               {(
                 [
                   { value: 'booked',   label: 'All demos',   title: 'Every Calendly demo — you set PQAD manually on each row' },
+                  { value: 'analytics', label: 'Analytics',  title: 'Show rate, confirmation, horizon, unresolved past demos' },
                   { value: 'pqad',     label: 'PQAD = yes',  title: 'Same rows, filtered to PQAD yes only (for payouts)' },
                   { value: 'rescue',   label: 'Rescue',      title: 'Past demos flagged for rescue / win-back' },
                   { value: 'pipeline', label: 'Pipeline',     title: 'Past demos grouped by pipeline stage — track your deals' },
@@ -648,7 +710,17 @@ export default function OrganizerDashboardPage() {
                   key={t.value}
                   type="button"
                   title={t.title}
-                  onClick={() => setTab(t.value)}
+                  onClick={() => {
+                    if (t.value === 'analytics') {
+                      router.push('/organizer/analytics');
+                      setTab('analytics');
+                    } else {
+                      if (pathname?.startsWith('/organizer/analytics')) {
+                        router.push('/organizer');
+                      }
+                      setTab(t.value);
+                    }
+                  }}
                   style={{
                     padding: '8px 14px',
                     borderRadius: 8,
@@ -659,15 +731,33 @@ export default function OrganizerDashboardPage() {
                           ? '#bf5af2'
                           : t.value === 'rescue'
                             ? RESCUE_COLOR
-                            : '#0a84ff'
+                            : t.value === 'analytics'
+                              ? '#30d158'
+                              : '#0a84ff'
                         : '#2a2a2e',
                     color: '#fff',
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: 'pointer',
+                    position: 'relative',
                   }}
                 >
                   {t.label}
+                  {t.value === 'analytics' && staleCount > 0 ? (
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        background: '#ff453a',
+                        color: '#fff',
+                        borderRadius: 999,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: '2px 6px',
+                      }}
+                    >
+                      {staleCount}
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </nav>
@@ -688,7 +778,7 @@ export default function OrganizerDashboardPage() {
             Sign out
           </button>
         </div>
-        {tab !== 'pipeline' && tab !== 'rescue' && (
+        {tab !== 'pipeline' && tab !== 'rescue' && tab !== 'analytics' && (
           <div
             style={{
               display: 'flex',
@@ -735,23 +825,41 @@ export default function OrganizerDashboardPage() {
             </span>
           </div>
         )}
-        {tab === 'rescue' && (
+        {tab === 'analytics' && (
           <div style={{ padding: '10px 24px 14px', borderTop: '1px solid #1c1c1f' }}>
             <span style={{ fontSize: 12, color: '#636366' }}>
-              Organized list of past demos flagged for rescue / win-back attention.
+              Meeting-time cohort. Show rate = attended / kept. Auto-NO_SHOW at T+12m. Canary at T+15m.
             </span>
+          </div>
+        )}
+        {staleCount > 0 && (
+          <div
+            style={{
+              padding: '10px 24px',
+              background: '#3a1210',
+              borderTop: '1px solid #ff453a',
+              color: '#ff6b6b',
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            {staleCount} demo{staleCount === 1 ? '' : 's'} still PENDING/CONFIRMED more than 15 minutes
+            after start. Auto-NO_SHOW missed them — open Analytics and mark Joined or No-Show. This
+            banner stays until the count is 0.
           </div>
         )}
       </header>
 
       <main style={{ padding: 24 }}>
-        {tab !== 'pipeline' && tab !== 'rescue' && (
+        {tab !== 'pipeline' && tab !== 'rescue' && tab !== 'analytics' && (
           <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 16, maxWidth: 820 }}>
             Every booking shows on <strong style={{ color: '#c7c7cc' }}>All demos</strong>. You manually
             set <strong style={{ color: '#c7c7cc' }}>PQAD</strong> (pending → yes or no) per row—nothing
-            is guessed. <strong style={{ color: '#c7c7cc' }}>PQAD = yes</strong> is the same records,
-            filtered to qualified demos for payout review. Who booked, verdict, and money live on that
-            row; lock kills argument after you save. Toggle <strong style={{ color: RESCUE_COLOR }}>Rescue</strong>{' '}
+            is guessed. <strong style={{ color: '#c7c7cc' }}>Joined / No-Show</strong> appear from 5 minutes
+            before the slot through 30 minutes after. Organizer click wins over auto-NO_SHOW.{' '}
+            <strong style={{ color: '#c7c7cc' }}>PQAD = yes</strong> is the same records, filtered to
+            qualified demos for payout review. Who booked, verdict, and money live on that row; lock
+            kills argument after you save. Toggle <strong style={{ color: RESCUE_COLOR }}>Rescue</strong>{' '}
             on any past demo to add it to the rescue list and pipeline column.{' '}
             <strong style={{ color: '#c7c7cc' }}>Upcoming</strong>{' '}
             / <strong style={{ color: '#c7c7cc' }}>Past demos</strong> use server time; below, rows are{' '}
@@ -780,7 +888,9 @@ export default function OrganizerDashboardPage() {
         {error ? (
           <p style={{ color: '#ff6b6b', fontSize: 13, marginBottom: 12 }}>{error}</p>
         ) : null}
-        {loading ? (
+        {tab === 'analytics' ? (
+          <AnalyticsPanel onMarkAttendance={saveAttendance} />
+        ) : loading ? (
           <p style={{ color: '#8e8e93' }}>Loading…</p>
         ) : tab === 'pipeline' ? (
           /* ── Pipeline kanban ── */
@@ -1035,6 +1145,7 @@ export default function OrganizerDashboardPage() {
                   <th style={{ ...cell, paddingTop: 14 }}>When</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Invitee</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Status</th>
+                  <th style={{ ...cell, paddingTop: 14 }}>Attendance</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Booked by</th>
                   <th style={{ ...cell, paddingTop: 14 }}>PQAD</th>
                   <th style={{ ...cell, paddingTop: 14 }}>Pay</th>
@@ -1052,7 +1163,7 @@ export default function OrganizerDashboardPage() {
                   <Fragment key={group.sortKey}>
                     <tr>
                       <td
-                        colSpan={13}
+                        colSpan={14}
                         style={{
                           padding: 0,
                           border: 'none',
@@ -1127,13 +1238,19 @@ export default function OrganizerDashboardPage() {
                             <span
                               style={{
                                 fontSize: 12,
-                                color: '#c7c7cc',
+                                color: isUnresolvedPast(d, Date.now()) ? '#ff9f0a' : '#c7c7cc',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.04em',
                               }}
                             >
                               {d.status}
                             </span>
+                          </td>
+                          <td style={cell}>
+                            <AttendanceCell
+                              demo={d}
+                              onMark={(attendance) => void saveAttendance(d.id, attendance)}
+                            />
                           </td>
                           <td style={cell}>
                             {locked ? (
@@ -1794,3 +1911,73 @@ const inputStyle: React.CSSProperties = {
   color: '#fff',
   fontSize: 12,
 };
+
+function AttendanceCell({
+  demo,
+  onMark,
+}: {
+  demo: Demo;
+  onMark: (attendance: 'showed' | 'no_show') => void;
+}) {
+  if (demo.status === 'CANCELLED' || demo.status === 'RESCHEDULED') {
+    return <span style={{ fontSize: 12, color: '#636366' }}>—</span>;
+  }
+
+  const canCorrect = canOrganizerCorrectAttendance(demo, Date.now());
+  const live = isLiveMeetingWindow(demo.scheduled_at, Date.now());
+  if (canCorrect) {
+    return (
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        {live && (
+          <span style={{ fontSize: 10, color: '#ffd60a', fontWeight: 600 }} title="Live meeting window">
+            LIVE
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => onMark('showed')}
+          style={{
+            padding: '5px 8px',
+            borderRadius: 6,
+            border: 'none',
+            background: '#30d158',
+            color: '#0a0a0b',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Joined
+        </button>
+        <button
+          type="button"
+          onClick={() => onMark('no_show')}
+          style={{
+            padding: '5px 8px',
+            borderRadius: 6,
+            border: 'none',
+            background: '#ff9f0a',
+            color: '#0a0a0b',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          No-Show
+        </button>
+      </div>
+    );
+  }
+
+  if (demo.status === 'COMPLETED' || demo.joined_at) {
+    return <span style={{ fontSize: 12, color: '#30d158', fontWeight: 600 }}>Joined</span>;
+  }
+  if (demo.status === 'NO_SHOW') {
+    return <span style={{ fontSize: 12, color: '#ff9f0a', fontWeight: 600 }}>No-show</span>;
+  }
+  const started = new Date(demo.scheduled_at).getTime() <= Date.now();
+  if (!started) {
+    return <span style={{ fontSize: 12, color: '#636366' }}>Upcoming</span>;
+  }
+  return <span style={{ fontSize: 12, color: '#ff9f0a', fontWeight: 600 }}>{demo.status}</span>;
+}

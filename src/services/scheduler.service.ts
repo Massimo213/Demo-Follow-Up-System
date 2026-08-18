@@ -118,7 +118,7 @@ export class SchedulerService {
     const demo = await db.demos.findById(demoId);
     if (!demo) return false;
 
-    if (['CANCELLED', 'RESCHEDULED'].includes(demo.status)) {
+    if (['CANCELLED', 'RESCHEDULED', 'NO_SHOW', 'COMPLETED'].includes(demo.status)) {
       return false;
     }
 

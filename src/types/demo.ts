@@ -44,6 +44,9 @@ export type PipelineStage =
   | 'closed_won'
   | 'closed_lost';
 
+/** How the demo row entered the system */
+export type IngestPath = 'webhook' | 'sync' | 'test' | 'unknown';
+
 /** Focus metric the prospect wants to improve — captured via commitment ladder */
 export type FocusMetric = 'close_rate' | 'deal_size' | 'follow_up' | null;
 
@@ -61,8 +64,16 @@ export interface Demo {
   status: DemoStatus;
   confirmed_at: string | null;
   joined_at: string | null;
+  no_show_at?: string | null;
   created_at: string;
   updated_at: string;
+  /** Hours from ingest to meeting — stored so classification is auditable. Immutable after insert. */
+  horizon_hours?: number | null;
+  ingest_path?: IngestPath | null;
+  ingest_lag_seconds?: number | null;
+  phone_e164?: string | null;
+  phone_valid?: boolean;
+  lead_source?: string | null;
   /** Focus metric captured from commitment ladder — close rate, deal size, or follow-up */
   focus_metric?: FocusMetric;
   /** Organizer rail — present after migration 011 */
@@ -133,17 +144,25 @@ export interface CalendlyEvent {
   event: 'invitee.created' | 'invitee.canceled';
   payload: {
     event: string;
+    created_at?: string;
+    tracking?: {
+      utm_source?: string;
+      utm_campaign?: string;
+      utm_medium?: string;
+    };
     invitee: {
       uuid: string;
       email: string;
       name: string;
       timezone: string;
+      created_at?: string;
       text_reminder_number?: string;
     };
     scheduled_event: {
       uuid: string;
       start_time: string;
       end_time: string;
+      created_at?: string;
       location?: {
         join_url?: string;
       };

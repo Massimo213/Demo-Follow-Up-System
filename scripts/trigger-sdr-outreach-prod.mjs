@@ -3,7 +3,7 @@
  * Secrets stay in .env on your machine — nothing is hardcoded here.
  *
  * Required in .env:
- *   APP_URL or ELYSTRA_APP_ORIGIN  — e.g. https://demo-follow-up-system.vercel.app
+ *   APP_URL or ELYSTRA_APP_ORIGIN  — e.g. https://demo-followup.vercel.app
  *   DEMO_ORGANIZER_SECRET         — same as organizer login (Bearer)
  *
  * Optional:

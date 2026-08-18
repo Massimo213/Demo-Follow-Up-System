@@ -48,6 +48,13 @@ export class ReplyService {
       return 'follow_up';
     }
 
+    // Numeric close rate: "32%", "32 percent", "32"
+    const pctMatch = normalized.match(/^(\d{1,2})(?:\s*%|\s*percent|\s*pc)?$/);
+    if (pctMatch) {
+      const n = Number(pctMatch[1]);
+      if (n >= 0 && n <= 100) return 'close_rate';
+    }
+
     return null;
   }
 
@@ -61,6 +68,8 @@ export class ReplyService {
     const lower = raw.toLowerCase();
 
     if (/\b(stop|unsubscribe)\b/i.test(raw)) return 'STOP';
+
+    if (/^c[.!\s]*$/i.test(raw)) return 'YES';
 
     if (/^(yes|y|yep|yeah|yup)[.!\s]*$/i.test(lower)) return 'YES';
     if (/^r[.!\s]*$/i.test(lower)) return 'RESCHEDULE';

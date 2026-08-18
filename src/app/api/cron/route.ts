@@ -18,6 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 import { MessagingService } from '@/services/messaging.service';
 import { ProspectMessagingService } from '@/services/prospect-messaging.service';
 import { isTransientSendError } from '@/lib/gmail-transport';
+import { resolveStaleDemos, alertStaleDemos } from '@/services/stale-demos.service';
 import type { Demo, ScheduledJob, MessageType } from '@/types/demo';
 import type { Prospect, ProspectScheduledJob, ProspectMessageType } from '@/types/prospect';
 
@@ -85,9 +86,32 @@ export async function GET() {
     const demoCount = dueJobs?.length || 0;
     const prospectCount = dueProspectJobs?.length || 0;
 
+    // Phase 0: always resolve stale attendance, even when no jobs are due.
+    let staleResolved = 0;
+    let staleAlerted = 0;
+    try {
+      const stale = await resolveStaleDemos(now);
+      staleResolved = stale.resolved;
+      if (stale.still_stale.length > 0) {
+        await alertStaleDemos(stale.still_stale);
+        staleAlerted = stale.still_stale.length;
+      }
+      console.log(
+        `[CRON:${runId}] resolveStaleDemos resolved=${staleResolved} still_stale=${stale.still_stale.length}`
+      );
+    } catch (err) {
+      console.error(`[CRON:${runId}] resolveStaleDemos failed:`, err);
+    }
+
     if (demoCount === 0 && prospectCount === 0) {
       console.log(`[CRON:${runId}] No due jobs found`);
-      return NextResponse.json({ status: 'ok', demo_processed: 0, prospect_processed: 0 });
+      return NextResponse.json({
+        status: 'ok',
+        demo_processed: 0,
+        prospect_processed: 0,
+        stale_resolved: staleResolved,
+        stale_alerted: staleAlerted,
+      });
     }
 
     console.log(`[CRON:${runId}] Found ${demoCount} demo jobs, ${prospectCount} prospect jobs`);
@@ -119,6 +143,8 @@ export async function GET() {
       run_id: runId,
       demo_processed: demoResults.length,
       prospect_processed: prospectResults.length,
+      stale_resolved: staleResolved,
+      stale_alerted: staleAlerted,
       demo_results: demoResults,
       prospect_results: prospectResults,
     });
@@ -168,7 +194,7 @@ async function processJobWithLock(
     }
 
     // Step 3: Check if demo is in terminal state (only skip if actually cancelled/rescheduled)
-    if (['CANCELLED', 'RESCHEDULED'].includes(demo.status)) {
+    if (['CANCELLED', 'RESCHEDULED', 'NO_SHOW', 'COMPLETED'].includes(demo.status)) {
       await markCompleted(supabase, job.id);
       return { job_id: job.id, status: 'skipped_terminal_state' };
     }

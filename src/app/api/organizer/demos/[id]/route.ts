@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { isOrganizerRequest } from '@/lib/organizer-auth';
 import { db, type DemoOrganizerPatch } from '@/lib/db';
+import { SchedulerService } from '@/services/scheduler.service';
 
 const ProspectDataSchema = z.object({
   proposals_per_month: z.number().int().min(1),
@@ -33,6 +34,7 @@ const BodySchema = z.object({
   private_workspace_link: z.string().url().max(2000).nullable().optional(),
   pipeline_stage: z.enum(PIPELINE_STAGES).optional(),
   is_rescue: z.boolean().optional(),
+  attendance: z.enum(['showed', 'no_show', 'joined']).optional(),
 });
 
 export const dynamic = 'force-dynamic';
@@ -130,6 +132,10 @@ export async function PATCH(
     patch.pqad_locked = true;
     patch.pqad_rejection_reason = null;
     patch.pqad_decided_at = new Date().toISOString();
+    patch.status = 'COMPLETED';
+    if (!demo.joined_at) {
+      patch.joined_at = new Date().toISOString();
+    }
   } else if (b.pqad_verdict === 'no') {
     const reason = (b.pqad_rejection_reason ?? '').trim();
     if (!reason) {
@@ -151,6 +157,7 @@ export async function PATCH(
     patch.pqad_decided_at = new Date().toISOString();
     patch.sdr_payout_cents = null;
     patch.lieutenant_override_cents = null;
+    patch.status = 'NO_SHOW';
   } else if (b.pqad_verdict === 'pending') {
     patch.pqad_verdict = 'pending';
     if (b.pqad_rejection_reason !== undefined) {
@@ -158,6 +165,26 @@ export async function PATCH(
     }
   } else if (b.pqad_rejection_reason !== undefined) {
     patch.pqad_rejection_reason = b.pqad_rejection_reason;
+  }
+
+  // 1-click attendance. Organizer wins over auto-NO_SHOW. Not blocked by pqad_locked.
+  const attendance = b.attendance === 'joined' ? 'showed' : b.attendance;
+  if (attendance === 'showed') {
+    const nowIso = new Date().toISOString();
+    patch.status = 'COMPLETED';
+    patch.joined_at = nowIso;
+    patch.no_show_at = null;
+    if (!demo.pqad_locked && demo.pqad_verdict === 'no_show') {
+      patch.pqad_verdict = 'pending';
+    }
+    await SchedulerService.cancelJobTypes(demo.id, ['POST_NO_SHOW', 'SMS_URGENT', 'JOIN_URGENT']);
+  } else if (attendance === 'no_show') {
+    patch.status = 'NO_SHOW';
+    patch.no_show_at = new Date().toISOString();
+    patch.joined_at = null;
+    if (!demo.pqad_locked && (demo.pqad_verdict === 'pending' || !demo.pqad_verdict)) {
+      patch.pqad_verdict = 'no_show';
+    }
   }
 
   if (Object.keys(patch).length === 0) {

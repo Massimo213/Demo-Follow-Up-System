@@ -68,7 +68,7 @@ export class MessagingService {
       if (demo.email?.trim()) {
         return this.sendEmail(demo, messageType, idempotencyKey);
       }
-      if (demo.phone?.trim()) {
+      if ((demo.phone_e164 || demo.phone)?.trim()) {
         return this.sendSms(demo, messageType);
       }
       console.log(`[MESSAGING] No email or phone for CONFIRM_REMINDER, skipping`);
@@ -147,16 +147,19 @@ export class MessagingService {
     demo: Demo,
     messageType: MessageType
   ): Promise<Message | null> {
-    // Skip if no phone number
-    if (!demo.phone) {
+    const to = (demo.phone_e164 || demo.phone || '').trim();
+    if (!to) {
       console.log(`[MESSAGING] No phone for ${demo.email}, skipping SMS`);
       return null;
     }
+    if (demo.phone_valid === false) {
+      console.log(`[MESSAGING] phone_valid=false for ${demo.email}, skipping SMS`);
+      return null;
+    }
 
-    // Check if already sent
     const alreadySent = await this.wasMessageSent(demo.id, messageType);
     if (alreadySent) {
-      console.log(`[MESSAGING] ${messageType} already sent to ${demo.phone}, skipping`);
+      console.log(`[MESSAGING] ${messageType} already sent to ${to}, skipping`);
       return null;
     }
 
@@ -175,22 +178,21 @@ export class MessagingService {
       const response = await twilio.messages.create({
         body: template.body,
         from: twilioNumber,
-        to: demo.phone,
+        to,
       });
 
-      // Record message
       try {
         const message = await db.messages.insert({
           demo_id: demo.id,
           channel: 'SMS',
           message_type: messageType,
-          recipient: demo.phone,
+          recipient: to,
           subject: null,
           body: template.body,
           external_id: response.sid,
         });
         
-        console.log(`[MESSAGING] SMS ${messageType} sent to ${demo.phone}`);
+        console.log(`[MESSAGING] SMS ${messageType} sent to ${to}`);
         return message;
       } catch (dbError: any) {
         if (dbError?.code === '23505') {
@@ -200,9 +202,29 @@ export class MessagingService {
         throw dbError;
       }
     } catch (error) {
+      if (isInvalidTwilioTo(error)) {
+        console.error(`[MESSAGING] Invalid destination ${to} — marking phone_valid=false`);
+        try {
+          await db.demos.setPhoneInvalid(demo.id);
+        } catch (markErr) {
+          console.error('[MESSAGING] Failed to mark phone_valid=false', markErr);
+        }
+        return null;
+      }
       console.error(`Failed to send SMS ${messageType}:`, error);
       throw error;
     }
+  }
+
+  /** Ops / canary SMS — not tied to a demo row. */
+  static async sendOpsSms(to: string, body: string): Promise<void> {
+    const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+    if (!twilioNumber) throw new Error('TWILIO_PHONE_NUMBER not configured');
+    await getTwilio().messages.create({
+      body,
+      from: twilioNumber,
+      to,
+    });
   }
 
   /**
@@ -258,6 +280,11 @@ export class MessagingService {
     });
     console.log(`[TEAM-NOTIFY] Team email sent to ${to}, id=${info.id}`);
   }
+}
+
+function isInvalidTwilioTo(error: unknown): boolean {
+  const code = (error as { code?: number | string } | null)?.code;
+  return code === 21614 || code === 21211 || code === '21614' || code === '21211';
 }
 
 function escapeHtml(s: string): string {

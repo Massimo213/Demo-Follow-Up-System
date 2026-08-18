@@ -49,12 +49,13 @@ export const config = {
   get calendly() {
     return {
       webhookSecret: getEnv('CALENDLY_WEBHOOK_SECRET'),
+      apiToken: (process.env.CALENDLY_API_TOKEN ?? '').trim(),
     };
   },
 
   get app() {
     return {
-      url: getEnv('APP_URL'),
+      url: getEnv('APP_URL').trim(),
       rescheduleUrl: RESCHEDULE_URL,
     };
   },

@@ -6,6 +6,7 @@
 import { db } from '@/lib/db';
 import type { Demo, DemoType, DemoStatus, CalendlyEvent, FocusMetric } from '@/types/demo';
 import { differenceInHours } from 'date-fns';
+import { stampIngest } from '@/lib/ingest';
 
 export class DemoService {
   /**
@@ -36,19 +37,32 @@ export class DemoService {
       );
       if (phoneAnswer) phone = phoneAnswer.answer;
     }
+    const insertedAt = new Date();
+    const ingest = stampIngest({
+      scheduledAt,
+      insertedAt,
+      path: 'webhook',
+      rawPhone: phone,
+      calendlyCreatedAt:
+        payload.scheduled_event.created_at ||
+        payload.created_at ||
+        payload.invitee.created_at ||
+        null,
+      tracking: payload.tracking,
+    });
 
     try {
       const demo = await db.demos.insert({
         calendly_event_id: payload.scheduled_event.uuid,
         calendly_invitee_id: payload.invitee.uuid,
         email: payload.invitee.email,
-        phone,
         name: payload.invitee.name,
         scheduled_at: scheduledAt.toISOString(),
         timezone: payload.invitee.timezone,
         demo_type: demoType,
         join_url: payload.scheduled_event.location?.join_url || '',
         status: 'PENDING',
+        ...ingest,
       });
 
       return demo;

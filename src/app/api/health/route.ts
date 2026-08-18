@@ -74,6 +74,23 @@ export async function GET() {
       checks.backlog = { status: 'ok', detail: `${backlogCount || 0} pending` };
     }
 
+    // Check 4: Past demos still PENDING/CONFIRMED (show rate unknown)
+    const unresolvedCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const { count: unresolvedCount } = await supabase
+      .from('demos')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['PENDING', 'CONFIRMED'])
+      .lt('scheduled_at', unresolvedCutoff);
+
+    if (unresolvedCount && unresolvedCount > 0) {
+      checks.unresolved_attendance = {
+        status: 'warn',
+        detail: `${unresolvedCount} past demo(s) still PENDING/CONFIRMED — auto-NO_SHOW missed them`,
+      };
+    } else {
+      checks.unresolved_attendance = { status: 'ok', detail: '0 unresolved' };
+    }
+
     // Overall status
     const hasFailure = Object.values(checks).some(c => c.status === 'fail');
     const hasWarning = Object.values(checks).some(c => c.status === 'warn');

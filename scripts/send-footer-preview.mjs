@@ -22,7 +22,7 @@ const WEBSITE_LABEL = 'elystra.online';
 const TAGLINE = 'Revenue sales infrastructure for agencies';
 const LOGO_URL =
   process.env.ELYSTRA_LOGO_URL ||
-  'https://demo-follow-up-system.vercel.app/LogoElystra-email.png';
+  'https://demo-followup.vercel.app/LogoElystra-email.png';
 const RESCHEDULE_URL = 'https://elystra.online/reschedule';
 
 const footerHtml = `

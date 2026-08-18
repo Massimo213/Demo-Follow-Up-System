@@ -14,10 +14,11 @@ import { createClient } from '@supabase/supabase-js';
 import { SchedulerService } from '@/services/scheduler.service';
 import { DemoService } from '@/services/demo.service';
 import { addHours, parseISO } from 'date-fns';
+import { stampIngest } from '@/lib/ingest';
 
 export const dynamic = 'force-dynamic';
 
-const CALENDLY_TOKEN = process.env.CALENDLY_WEBHOOK_SECRET;
+const CALENDLY_TOKEN = process.env.CALENDLY_API_TOKEN?.trim();
 const CALENDLY_USER_URI = 'https://api.calendly.com/users/b2753ddb-5c42-4488-ac4f-db692038e488';
 
 function getSupabase() {
@@ -32,6 +33,7 @@ interface CalendlyEvent {
   name: string;
   start_time: string;
   end_time: string;
+  created_at?: string;
   event_type: string;
   location?: {
     join_url?: string;
@@ -47,7 +49,13 @@ interface CalendlyInvitee {
   name: string;
   status: string;
   timezone: string;
+  created_at?: string;
   text_reminder_number?: string;
+  tracking?: {
+    utm_source?: string;
+    utm_campaign?: string;
+    utm_medium?: string;
+  };
   questions_and_answers?: Array<{
     question: string;
     answer: string;
@@ -62,7 +70,9 @@ export async function GET() {
     console.log(`[SYNC:${syncId}] Starting Calendly sync...`);
     
     if (!CALENDLY_TOKEN) {
-      return NextResponse.json({ error: 'Missing Calendly token' }, { status: 500 });
+      return NextResponse.json({
+        error: 'Missing CALENDLY_API_TOKEN (Bearer PAT for sync — not CALENDLY_WEBHOOK_SECRET)',
+      }, { status: 500 });
     }
 
     const supabase = getSupabase();
@@ -174,16 +184,18 @@ export async function GET() {
                   qa.question.toLowerCase().includes('contact')
         );
         if (phoneAnswer && phoneAnswer.answer) {
-          // Clean phone number - remove non-digits except +
-          phone = phoneAnswer.answer.replace(/[^\d+]/g, '');
-          if (phone && phone.length >= 10 && !phone.startsWith('+')) {
-            phone = '+1' + phone; // Assume North American
-          }
-          if (phone && phone.length < 10) {
-            phone = null; // Invalid phone
-          }
+          phone = phoneAnswer.answer;
         }
       }
+      const insertedAt = new Date();
+      const ingest = stampIngest({
+        scheduledAt: demoTime,
+        insertedAt,
+        path: 'sync',
+        rawPhone: phone,
+        calendlyCreatedAt: event.created_at || invitee.created_at || null,
+        tracking: invitee.tracking,
+      });
       
       console.log(`[SYNC:${syncId}] Invitee ${invitee.email} - phone: ${phone}, questions:`, JSON.stringify(invitee.questions_and_answers));
 
@@ -195,13 +207,13 @@ export async function GET() {
           calendly_invitee_id: invitee.uri.split('/').pop() || '',
           email: invitee.email,
           name: invitee.name,
-          phone,
           scheduled_at: event.start_time,
           demo_type: demoType,
           status: 'PENDING',
           join_url: event.location?.join_url || `https://calendly.com/onboarding-elystra/30min`,
           timezone: invitee.timezone || 'America/New_York',
-          created_at: new Date().toISOString()
+          created_at: insertedAt.toISOString(),
+          ...ingest,
         }, {
           onConflict: 'calendly_event_id',
           ignoreDuplicates: true // Don't update if exists, just skip
