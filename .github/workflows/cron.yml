@@ -1,0 +1,16 @@
+name: External cron (Hobby plan)
+
+on:
+  schedule:
+    # GitHub Actions minimum interval is 5 minutes on free tier.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process due scheduled jobs
+        run: curl -fsS "https://demo-followup.vercel.app/api/cron"
+      - name: Calendly sync catch-up
+        run: curl -fsS "https://demo-followup.vercel.app/api/sync/calendly"
