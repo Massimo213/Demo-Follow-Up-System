@@ -11,7 +11,7 @@ import type { Demo, Reply, FocusMetric } from '@/types/demo';
 type ParsedIntent = 'YES' | 'RESCHEDULE' | 'SOONER' | '1' | '2' | 'FOCUS_METRIC' | 'UNKNOWN';
 
 /** Focus metric values from commitment ladder */
-type ParsedFocusMetric = 'close_rate' | 'deal_size' | 'follow_up' | null;
+type ParsedFocusMetric = Exclude<FocusMetric, null | undefined>;
 
 /** Inbound Twilio SMS → automation intents (full body scanned, not truncated). */
 export type SmsParsedIntent = 'YES' | 'STOP' | 'RESCHEDULE' | 'CLOSE' | 'CANCEL' | 'UNKNOWN';
@@ -21,7 +21,7 @@ export class ReplyService {
    * Parse focus metric from reply body (commitment ladder response)
    * Returns the metric if detected, null otherwise
    */
-  static parseFocusMetric(body: string): ParsedFocusMetric {
+  static parseFocusMetric(body: string): ParsedFocusMetric | null {
     const normalized = body.trim().toLowerCase();
 
     // Close rate patterns
@@ -32,12 +32,27 @@ export class ReplyService {
       return 'close_rate';
     }
 
-    // Deal size patterns
+    // Deal size patterns — before generic "revenue", so "revenue per deal" stays deal size.
     if (/\b(deal size|deal-size|dealsize|average deal|avg deal|ticket size|contract size|revenue per deal)\b/i.test(normalized)) {
       return 'deal_size';
     }
     if (/^(deal|deals|size|average|ticket)$/i.test(normalized)) {
       return 'deal_size';
+    }
+
+    // Total revenue collected — the third option on the confirm email.
+    if (
+      /\b(total revenue(?: collected)?(?: per month)?|revenue collected|monthly revenue|collected revenue)\b/i.test(
+        normalized
+      )
+    ) {
+      return 'revenue';
+    }
+    if (/^(revenue|revenues)$/i.test(normalized)) {
+      return 'revenue';
+    }
+    if (/\brevenue\b/i.test(normalized)) {
+      return 'revenue';
     }
 
     // Follow-up patterns

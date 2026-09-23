@@ -19,8 +19,22 @@ function formatShortTime(demo: Demo): string {
   return format(demoDate, 'h:mm a');
 }
 
-function preDemoAssetUrl(): string {
-  return process.env.PRE_DEMO_ASSET_URL || 'https://app.elystra.online/pre-demo';
+/** GSM-7 single segment. A second segment can split a URL on some phones. */
+const SMS_SINGLE_SEGMENT = 160;
+
+/**
+ * T-30m text. Join URL always. Reschedule only when both fit in one segment.
+ * The room link is the attendance action; the escape hatch already exists on the T-10m email.
+ */
+export function buildThirtyMinuteSms(joinUrl: string, rescheduleUrl: string): string {
+  const lead = 'Your Elystra walkthrough starts in 30 minutes.';
+  const join = joinUrl.trim();
+  if (!join) {
+    return `${lead} Need to reschedule? ${rescheduleUrl}`;
+  }
+  const withBoth = `${lead} Join here: ${join}. Need to reschedule? ${rescheduleUrl}`;
+  if (withBoth.length <= SMS_SINGLE_SEGMENT) return withBoth;
+  return `${lead} Join here: ${join}`;
 }
 
 function getFocusMetricText(demo: Demo): string {
@@ -28,6 +42,7 @@ function getFocusMetricText(demo: Demo): string {
     close_rate: 'close rate',
     deal_size: 'deal size',
     follow_up: 'follow-up',
+    revenue: 'total revenue',
   };
   return demo.focus_metric ? metricMap[demo.focus_metric] || 'your numbers' : 'your numbers';
 }
@@ -40,7 +55,6 @@ export class SmsTemplates {
   static getTemplate(messageType: MessageType, demo: Demo): SmsTemplate | null {
     const firstName = demo.name.split(' ')[0];
     const time = formatShortTime(demo);
-    const assetUrl = preDemoAssetUrl();
     const rescheduleUrl = getRescheduleUrl();
 
     const templates: Partial<Record<MessageType, () => SmsTemplate>> = {
@@ -104,15 +118,10 @@ If you haven't yet: close rate, deal size, or follow-up — which one matters mo
 
       /**
        * SMS_REMINDER — T-30min (all sequences)
-       * Reschedule link APPEARS here — first time. Real same-day conflict can exist.
-       * Asset becomes a direct prompt.
+       * Room link is the action. Reschedule stays only if the text fits in one SMS segment.
        */
       SMS_REMINDER: () => ({
-        body: `${firstName} — 30 minutes out.
-
-If you haven't opened this yet, open it now — it's 90 seconds and it'll make the call land faster: ${assetUrl}
-
-Something blow up last minute? ${rescheduleUrl}`,
+        body: buildThirtyMinuteSms(demo.join_url, rescheduleUrl),
       }),
 
       /**

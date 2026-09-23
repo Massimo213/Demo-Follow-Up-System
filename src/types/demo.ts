@@ -48,7 +48,7 @@ export type PipelineStage =
 export type IngestPath = 'webhook' | 'sync' | 'test' | 'unknown';
 
 /** Focus metric the prospect wants to improve — captured via commitment ladder */
-export type FocusMetric = 'close_rate' | 'deal_size' | 'follow_up' | null;
+export type FocusMetric = 'close_rate' | 'deal_size' | 'follow_up' | 'revenue' | null;
 
 export interface Demo {
   id: string;

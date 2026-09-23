@@ -10,6 +10,8 @@ import { ReplyService } from '@/services/reply.service';
 import { resolveStepSchedule } from '@/lib/schedule-compact';
 import { TIMING } from '@/lib/config';
 import { calendlySecretMisconfig, extractPhoneFromInvitee } from '@/lib/calendly';
+import { buildThirtyMinuteSms } from '@/templates/sms';
+import { getRescheduleUrl } from '@/lib/urls';
 
 export type Phase0Check = { name: string; pass: boolean; detail: string };
 
@@ -120,6 +122,16 @@ export function runPhase0AdversarialChecks(nowMs = Date.now()): Phase0Check[] {
   const metric32pct = ReplyService.parseFocusMetric('32%');
   const metricCloseRate = ReplyService.parseFocusMetric('close rate');
   const metricYesNotMetric = ReplyService.parseFocusMetric('YES');
+  const metricRevenue = ReplyService.parseFocusMetric('revenue');
+  const metricTotalRevenue = ReplyService.parseFocusMetric('total revenue collected per month');
+  const metricRevenuePerDeal = ReplyService.parseFocusMetric('revenue per deal');
+
+  const rescheduleUrl = getRescheduleUrl();
+  const shortJoin = 'https://meet.google.com/abc-defg-hij';
+  const longJoin =
+    'https://zoom.us/j/12345678901?pwd=abcdefghijklmnopqrstuvwxyz0123456789';
+  const smsBoth = buildThirtyMinuteSms(shortJoin, rescheduleUrl);
+  const smsJoinOnly = buildThirtyMinuteSms(longJoin, rescheduleUrl);
 
   // Delayed ingest: JOIN_LINK at T-10m missed but meeting not started → compact to now
   const meetingMs = t0 + 20 * 60 * 1000;
@@ -210,6 +222,25 @@ export function runPhase0AdversarialChecks(nowMs = Date.now()): Phase0Check[] {
       name: 'SMS "32%" parses as close_rate focus metric',
       pass: metric32pct === 'close_rate' && metricCloseRate === 'close_rate' && metricYesNotMetric === null,
       detail: `32%=${metric32pct} close rate=${metricCloseRate} YES=${metricYesNotMetric}`,
+    },
+    {
+      name: 'Revenue replies store revenue; revenue per deal stays deal size',
+      pass:
+        metricRevenue === 'revenue' &&
+        metricTotalRevenue === 'revenue' &&
+        metricRevenuePerDeal === 'deal_size',
+      detail: `revenue=${metricRevenue} total=${metricTotalRevenue} perDeal=${metricRevenuePerDeal}`,
+    },
+    {
+      name: 'T-30m SMS carries the join URL and drops reschedule when over 160 chars',
+      pass:
+        smsBoth.includes(shortJoin) &&
+        smsBoth.includes(rescheduleUrl) &&
+        smsBoth.length <= 160 &&
+        smsJoinOnly.includes(longJoin) &&
+        !smsJoinOnly.includes(rescheduleUrl) &&
+        smsJoinOnly.startsWith('Your Elystra walkthrough starts in 30 minutes.'),
+      detail: `both=${smsBoth.length} joinOnly=${smsJoinOnly.length}`,
     },
     {
       name: 'Missed JOIN_LINK (T-10m) compacts to now if meeting not started',

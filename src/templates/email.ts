@@ -41,6 +41,7 @@ function getFocusMetricText(demo: Demo): string {
     close_rate: 'close rate',
     deal_size: 'deal size',
     follow_up: 'follow-up',
+    revenue: 'total revenue',
   };
   return demo.focus_metric ? metricMap[demo.focus_metric] || 'your numbers' : 'your numbers';
 }
