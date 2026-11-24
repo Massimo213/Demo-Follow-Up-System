@@ -8,7 +8,7 @@ import {
 import { isExcludedFromAnalytics } from '@/lib/demo-exclusions';
 import { ReplyService } from '@/services/reply.service';
 import { resolveStepSchedule } from '@/lib/schedule-compact';
-import { TIMING } from '@/lib/config';
+import { BOOKING_SMS_DELAY_MS, TIMING } from '@/lib/config';
 import { calendlySecretMisconfig, extractPhoneFromInvitee } from '@/lib/calendly';
 import { buildThirtyMinuteSms } from '@/templates/sms';
 import { getRescheduleUrl } from '@/lib/urls';
@@ -126,6 +126,25 @@ export function runPhase0AdversarialChecks(nowMs = Date.now()): Phase0Check[] {
   const metricTotalRevenue = ReplyService.parseFocusMetric('total revenue collected per month');
   const metricRevenuePerDeal = ReplyService.parseFocusMetric('revenue per deal');
 
+  const painIntent = ReplyService.parseIntent('proposals take too long to go out');
+  const yesOnlyIntent = ReplyService.parseIntent('yes');
+  const yesPlusPain = ReplyService.parseIntent('yes, proposals take too long');
+  const thanksIntent = ReplyService.parseIntent('thanks');
+  const bookingText = resolveStepSchedule({
+    messageType: 'SMS_CONFIRM',
+    offsetMs: BOOKING_SMS_DELAY_MS,
+    scheduledAtMs: t0 + 3 * 60 * 60 * 1000,
+    nowMs: t0,
+    anchor: 'ingest',
+  });
+  const bookingTextAfterStart = resolveStepSchedule({
+    messageType: 'SMS_CONFIRM',
+    offsetMs: BOOKING_SMS_DELAY_MS,
+    scheduledAtMs: t0 + 60 * 1000,
+    nowMs: t0,
+    anchor: 'ingest',
+  });
+
   const rescheduleUrl = getRescheduleUrl();
   const shortJoin = 'https://meet.google.com/abc-defg-hij';
   const longJoin =
@@ -230,6 +249,23 @@ export function runPhase0AdversarialChecks(nowMs = Date.now()): Phase0Check[] {
         metricTotalRevenue === 'revenue' &&
         metricRevenuePerDeal === 'deal_size',
       detail: `revenue=${metricRevenue} total=${metricTotalRevenue} perDeal=${metricRevenuePerDeal}`,
+    },
+    {
+      name: 'Open reply is stored as their words; a bare yes or thanks is not',
+      pass:
+        painIntent === 'PAIN' &&
+        yesPlusPain === 'PAIN' &&
+        yesOnlyIntent === 'YES' &&
+        thanksIntent === 'UNKNOWN',
+      detail: `pain=${painIntent} yesPlus=${yesPlusPain} yes=${yesOnlyIntent} thanks=${thanksIntent}`,
+    },
+    {
+      name: 'Booking text is 2 minutes after the booking, and skipped if the meeting is sooner',
+      pass:
+        bookingText.action === 'schedule' &&
+        bookingText.scheduledForMs === t0 + BOOKING_SMS_DELAY_MS &&
+        bookingTextAfterStart.action === 'skip',
+      detail: `onTime=${JSON.stringify(bookingText)} tooLate=${JSON.stringify(bookingTextAfterStart)}`,
     },
     {
       name: 'T-30m SMS carries the join URL and drops reschedule when over 160 chars',

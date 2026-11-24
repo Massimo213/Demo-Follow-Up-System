@@ -7,8 +7,9 @@ import { db } from '@/lib/db';
 import { DemoService } from './demo.service';
 import { SchedulerService } from './scheduler.service';
 import type { Demo, Reply, FocusMetric } from '@/types/demo';
+import { extractPainReply } from '@/lib/pain-reply';
 
-type ParsedIntent = 'YES' | 'RESCHEDULE' | 'SOONER' | '1' | '2' | 'FOCUS_METRIC' | 'UNKNOWN';
+type ParsedIntent = 'YES' | 'RESCHEDULE' | 'SOONER' | '1' | '2' | 'PAIN' | 'UNKNOWN';
 
 /** Focus metric values from commitment ladder */
 type ParsedFocusMetric = Exclude<FocusMetric, null | undefined>;
@@ -147,18 +148,17 @@ export class ReplyService {
   static parseIntent(body: string): ParsedIntent {
     const normalized = body.trim().toLowerCase();
 
-    // FOCUS METRIC patterns (commitment ladder responses) — check first
-    // These are valuable engagement signals and implicitly confirm interest
-    const focusMetric = this.parseFocusMetric(body);
-    if (focusMetric) {
-      return 'FOCUS_METRIC';
-    }
-
-    // YES patterns
-    if (/^(yes|yep|yeah|yup|y|confirm|confirmed|i'?m in|count me in|see you|sounds good|perfect|great|ok|okay|good|👍|✓|✔)$/i.test(normalized)) {
+    // YES only when the whole reply is a confirmation.
+    // A longer reply is their answer, even if it starts with yes.
+    if (/^(yes|yep|yeah|yup|y|confirm|confirmed|i'?m in|count me in|see you|see you then|i'?ll be there|i'?m coming|sounds good|perfect|great|ok|okay|good|still on|👍|✓|✔)$/i.test(normalized)) {
       return 'YES';
     }
-    if (/\b(yes|confirm|i'?ll be there|i'?m coming|see you then)\b/i.test(normalized)) {
+    const afterYes = normalized.replace(/^(?:yes|yep|yeah|yup|y|confirm|confirmed|ok|okay|sure)[,.!\s]+/i, '').trim();
+    if (
+      afterYes &&
+      afterYes !== normalized &&
+      /^(i'?m in|count me in|see you|see you then|i'?ll be there|i will be there|i'?m coming|sounds good|perfect|great|still on|confirmed)$/i.test(afterYes)
+    ) {
       return 'YES';
     }
 
@@ -180,8 +180,10 @@ export class ReplyService {
     // Option selection (1 or 2)
     if (/^1$/.test(normalized)) return '1';
     if (/^2$/.test(normalized)) return '2';
-    if (/\b(option 1|first one|morning)\b/i.test(normalized)) return '1';
-    if (/\b(option 2|second one|afternoon)\b/i.test(normalized)) return '2';
+    if (/^(option 1|first one|morning)$/i.test(normalized)) return '1';
+    if (/^(option 2|second one|afternoon)$/i.test(normalized)) return '2';
+
+    if (extractPainReply(body)) return 'PAIN';
 
     return 'UNKNOWN';
   }
@@ -227,8 +229,8 @@ export class ReplyService {
       case 'YES':
         return this.handleConfirmation(demo);
 
-      case 'FOCUS_METRIC':
-        return this.handleFocusMetric(demo, replyBody || '');
+      case 'PAIN':
+        return this.handlePainReply(demo, replyBody || '');
 
       case 'RESCHEDULE':
         return this.handleReschedule(demo);
@@ -254,22 +256,15 @@ export class ReplyService {
   }
 
   /**
-   * Handle FOCUS_METRIC response (commitment ladder engagement)
-   * This is an implicit confirmation + valuable data capture
+   * They answered the open question. Store their words and treat the booking as confirmed.
+   * Later messages quote this instead of a category.
    */
-  static async handleFocusMetric(demo: Demo, replyBody: string): Promise<string> {
-    const focusMetric = this.parseFocusMetric(replyBody);
-    
-    if (focusMetric) {
-      // Update the demo with the focus metric
-      await DemoService.updateFocusMetric(demo.id, focusMetric);
-      // Also mark as confirmed — they're engaged
-      await DemoService.updateStatus(demo.id, 'CONFIRMED');
-      console.log(`Demo ${demo.id} focus_metric set to ${focusMetric} by ${demo.email}`);
-      return `FOCUS_METRIC_${focusMetric.toUpperCase()}`;
-    }
-    
-    return 'FOCUS_METRIC_PARSE_FAILED';
+  static async handlePainReply(demo: Demo, replyBody: string): Promise<string> {
+    const reply = extractPainReply(replyBody);
+    if (!reply) return 'PAIN_EMPTY';
+    await DemoService.savePainReply(demo.id, reply);
+    console.log(`Demo ${demo.id} focus_reply saved (${reply.length} chars) by ${demo.email}`);
+    return 'PAIN_SAVED';
   }
 
   /**

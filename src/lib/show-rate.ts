@@ -257,7 +257,7 @@ export function buildShowRateReport(
     if (d.ingest_lag_seconds != null && d.ingest_lag_seconds < INGEST_FAST_SECONDS) ingestFast += 1;
     if (hasType(msgs, 'CONFIRM_INITIAL') || hasType(msgs, 'CONFIRM_INITIAL_LOOM')) t0Email += 1;
     if (hasType(msgs, 'SMS_CONFIRM')) t0Sms += 1;
-    if (d.focus_metric) metric += 1;
+    if (d.focus_metric || (d.focus_reply && d.focus_reply.trim())) metric += 1;
     if (d.confirmed_at) confirmed += 1;
     if (hasType(msgs, 'SMS_DAY_BEFORE')) t24 += 1;
     if (hasType(msgs, 'SMS_REMINDER')) t30sms += 1;
@@ -279,8 +279,8 @@ export function buildShowRateReport(
     { key: 'booked', label: 'Booked' },
     { key: 'ingest_fast', label: 'Ingest < 60s' },
     { key: 't0_email', label: 'T+0 Email sent' },
-    { key: 't0_sms', label: 'T+0 SMS sent' },
-    { key: 'metric', label: 'Metric captured' },
+    { key: 't0_sms', label: 'Booking text sent' },
+    { key: 'metric', label: 'Reply captured' },
     { key: 'confirmed', label: 'Confirmed' },
     { key: 't24h', label: 'T-24h sent' },
     { key: 't45m', label: 'T-45m sent' },

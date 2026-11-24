@@ -76,6 +76,8 @@ export interface Demo {
   lead_source?: string | null;
   /** Focus metric captured from commitment ladder — close rate, deal size, or follow-up */
   focus_metric?: FocusMetric;
+  /** Their own words, from the open pre-demo question. Quoted in later messages. */
+  focus_reply?: string | null;
   /** Organizer rail — present after migration 011 */
   organizer_booked_by?: string;
   pqad_verdict?: PqadVerdict;

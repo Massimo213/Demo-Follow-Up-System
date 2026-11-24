@@ -7,6 +7,7 @@
 
 import type { Demo, MessageType } from '@/types/demo';
 import { getRescheduleUrl } from '@/lib/urls';
+import { painReplyForSms } from '@/lib/pain-reply';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
@@ -37,24 +38,17 @@ export function buildThirtyMinuteSms(joinUrl: string, rescheduleUrl: string): st
   return `${lead} Join here: ${join}`;
 }
 
-function getFocusMetricText(demo: Demo): string {
-  const metricMap: Record<string, string> = {
-    close_rate: 'close rate',
-    deal_size: 'deal size',
-    follow_up: 'follow-up',
-    revenue: 'total revenue',
-  };
-  return demo.focus_metric ? metricMap[demo.focus_metric] || 'your numbers' : 'your numbers';
-}
-
-function hasFocusMetric(demo: Demo): boolean {
-  return !!demo.focus_metric;
+function formatDayAtTime(demo: Demo): string {
+  const demoDate = toZonedTime(new Date(demo.scheduled_at), demo.timezone);
+  return format(demoDate, "EEEE 'at' h:mm a");
 }
 
 export class SmsTemplates {
   static getTemplate(messageType: MessageType, demo: Demo): SmsTemplate | null {
     const firstName = demo.name.split(' ')[0];
     const time = formatShortTime(demo);
+    const when = formatDayAtTime(demo);
+    const reply = painReplyForSms(demo);
     const rescheduleUrl = getRescheduleUrl();
 
     const templates: Partial<Record<MessageType, () => SmsTemplate>> = {
@@ -63,11 +57,7 @@ export class SmsTemplates {
        * No reschedule link. Asks which number matters.
        */
       SMS_CONFIRM: () => ({
-        body: `${firstName}, it's David from Elystra.
-
-Your 7-minute walkthrough is locked for ${time}.
-
-Quick question: what's the one number you'd most want to move — close rate, deal size, or total revenue collected per month? Reply with one and I'll build the call around it.`,
+        body: `${firstName} — ${when} is locked. One thing before we start: what would you fix first in how your agency closes deals? Reply here and I'll build the call around it.`,
       }),
 
       /**
@@ -76,13 +66,13 @@ Quick question: what's the one number you'd most want to move — close rate, de
        * No reschedule link — a day out, no same-day conflict exists yet.
        */
       SMS_DAY_BEFORE: () => {
-        const body = hasFocusMetric(demo)
-          ? `${firstName} — we're on tomorrow at ${time}.
+        const body = reply
+          ? `${firstName} — tomorrow at ${time}.
 
-You mentioned ${getFocusMetricText(demo)} — that's where I'll start. See you then.`
+You said ${reply} — built the call around it. See you then.`
           : `${firstName} — we're on tomorrow at ${time}.
 
-Did one of those three hit — close rate, deal size, or follow-up? Reply with the one that stings most and I'll make sure we cover it.`;
+Most agencies say the same thing — deals die between proposal and payment. If yours is different, reply and I'll adjust. Otherwise I'm starting there.`;
         return { body };
       },
 
@@ -91,13 +81,13 @@ Did one of those three hit — close rate, deal size, or follow-up? Reply with t
        * No reschedule link — 4 hours out, no same-day conflict yet.
        */
       CONFIRM_REMINDER: () => {
-        const body = hasFocusMetric(demo)
+        const body = reply
           ? `${firstName}, we're on today at ${time}.
 
-You said ${getFocusMetricText(demo)} — that's exactly where we'll start.`
-          : `${firstName}, we're on today at ${time} for your 7-minute walkthrough.
+You said ${reply} — that's where we're starting.`
+          : `${firstName}, we're on today at ${time}.
 
-Quick question before we hop on: close rate, deal size, or total revenue collected per month — which one stings most?`;
+Most agencies say deals stall after the proposal — if yours is different let me know and I'll adjust. Otherwise that's where we start.`;
         return { body };
       },
 
@@ -106,13 +96,13 @@ Quick question before we hop on: close rate, deal size, or total revenue collect
        * No reschedule link.
        */
       EVENING_BEFORE: () => {
-        const body = hasFocusMetric(demo)
+        const body = reply
           ? `${firstName}, heads up — we're on tomorrow at ${time}.
 
-You mentioned ${getFocusMetricText(demo)}. I'll have something specific for you on that.`
-          : `${firstName}, heads up — we're on tomorrow at ${time} for your 7-minute walkthrough.
+You said ${reply}. I'll have something specific for you on that.`
+          : `${firstName}, heads up — we're on tomorrow at ${time}.
 
-If you haven't yet: close rate, deal size, or follow-up — which one matters most? Reply and I'll build around it.`;
+Most agencies say deals die between proposal and payment. If yours is different, reply and I'll adjust.`;
         return { body };
       },
 

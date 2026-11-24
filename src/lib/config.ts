@@ -61,6 +61,9 @@ export const config = {
   },
 };
 
+/** Text that asks the open question, sent shortly after the booking email. */
+export const BOOKING_SMS_DELAY_MS = 2 * 60 * 1000;
+
 // Timing constants (in milliseconds)
 export const TIMING = {
   SAME_DAY: {

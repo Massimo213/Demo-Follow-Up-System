@@ -14,6 +14,7 @@ import { ReplyService } from '@/services/reply.service';
 import { MessagingService } from '@/services/messaging.service';
 import { DemoService } from '@/services/demo.service';
 import { getRescheduleUrl } from '@/lib/urls';
+import { extractPainReply } from '@/lib/pain-reply';
 
 export const dynamic = 'force-dynamic';
 
@@ -162,18 +163,13 @@ export async function POST(request: NextRequest) {
         
         console.log(`[SMS REPLY] STOP - removed phone for ${demo.email}`);
       } else {
-        const focusMetric = ReplyService.parseFocusMetric(body);
-        if (focusMetric) {
-          await supabase
-            .from('demos')
-            .update({
-              focus_metric: focusMetric,
-              status: 'CONFIRMED',
-              confirmed_at: new Date().toISOString(),
-            })
-            .eq('id', demo.id)
-            .in('status', ['PENDING', 'CONFIRMED']);
-          console.log(`[SMS REPLY] Metric ${focusMetric} + confirmed for ${demo.email}`);
+        const pain =
+          intent === 'CANCEL' || intent === 'CLOSE' || intent === 'RESCHEDULE'
+            ? null
+            : extractPainReply(body);
+        if (pain) {
+          await DemoService.savePainReply(demo.id, pain);
+          console.log(`[SMS REPLY] Saved their words (${pain.length} chars) for ${demo.email}`);
         }
 
         if (intent === 'CANCEL' || intent === 'CLOSE') {
@@ -194,7 +190,7 @@ export async function POST(request: NextRequest) {
         console.log(`[SMS REPLY] CANCEL/CLOSE for ${demo.email}`);
       }
       
-      if (intent === 'YES') {
+      if (intent === 'YES' && !pain) {
         await supabase
           .from('demos')
           .update({ status: 'CONFIRMED', confirmed_at: new Date().toISOString() })

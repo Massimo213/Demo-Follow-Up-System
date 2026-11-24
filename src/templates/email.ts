@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { wrapEmailHtmlClean } from '@/lib/email-signature';
 import { getRescheduleUrl } from '@/lib/urls';
+import { painReply } from '@/lib/pain-reply';
 
 interface EmailTemplate {
   subject: string;
@@ -32,22 +33,19 @@ function formatDay(demo: Demo): string {
   return format(demoDate, 'EEEE');
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function preDemoAssetUrl(): string {
   return process.env.PRE_DEMO_ASSET_URL || 'https://app.elystra.online/pre-demo';
 }
 
-function getFocusMetricText(demo: Demo): string {
-  const metricMap: Record<string, string> = {
-    close_rate: 'close rate',
-    deal_size: 'deal size',
-    follow_up: 'follow-up',
-    revenue: 'total revenue',
-  };
-  return demo.focus_metric ? metricMap[demo.focus_metric] || 'your numbers' : 'your numbers';
-}
-
-function hasFocusMetric(demo: Demo): boolean {
-  return !!demo.focus_metric;
+function said(demo: Demo): string | null {
+  return painReply(demo);
 }
 
 export class EmailTemplates {
@@ -87,11 +85,11 @@ export class EmailTemplates {
 
 <p><strong>${time}</strong> is locked for your 7-minute walkthrough.</p>
 
-<p>We keep these short abd focused — so one quick thing: <strong>what's the number you most want to move : close rate, average deal size, or total revenue collected per month?</strong></p>
+<p>Quick one before we start — what's the one thing in your sales process you'd fix tomorrow if you could?</p>
 
-<p>Reply with one and I'll build the walkthrough around it.</p>
+<p>Reply with it and I'll build the walkthrough around it.</p>
 
-<p>Here's a 90-second look at what we'll be talking about: <a href="${assetUrl}">${assetUrl}</a></p>
+<p>Here's a 90-second look at what we cover: <a href="${assetUrl}">${assetUrl}</a></p>
 
 <p>See you ${day}.</p>
 
@@ -101,11 +99,11 @@ export class EmailTemplates {
 
 ${time} is locked for your 7-minute walkthrough.
 
-We keep these short and focused — so one quick thing: what's the number you most want to move : close rate, average deal size, or total revenue collected per month?
+Quick one before we start — what's the one thing in your sales process you'd fix tomorrow if you could?
 
-Reply with one and I'll build the walkthrough around it.
+Reply with it and I'll build the walkthrough around it.
 
-Here's a 90-second look at what we'll be talking about: ${assetUrl}
+Here's a 90-second look at what we cover: ${assetUrl}
 
 See you ${day}.
 
@@ -123,13 +121,22 @@ David`,
     const firstName = demo.name.split(' ')[0];
     const assetUrl = preDemoAssetUrl();
 
-    const metricLine = hasFocusMetric(demo)
-      ? `<p>You mentioned <strong>${getFocusMetricText(demo)}</strong> was the one you wanted to move — that's exactly where I'll start.</p>`
-      : `<p>Come with your rough monthly proposal count in mind — that's where we'll start.</p>`;
+    const reply = said(demo);
+    const bodyHtml = reply
+      ? `<p>You said <strong>${escapeHtml(reply)}</strong> — I've built the walkthrough around it.</p>
 
-    const metricLineText = hasFocusMetric(demo)
-      ? `You mentioned ${getFocusMetricText(demo)} was the one you wanted to move — that's exactly where I'll start.`
-      : `Come with your rough monthly proposal count in mind — that's where we'll start.`;
+<p>Here's a 90-second look at the shape of it: <a href="${assetUrl}">${assetUrl}</a></p>`
+      : `<p>Most agencies your size say the same thing — deals stall somewhere between the proposal going out and the payment landing. If yours is different, reply and I'll adjust. Otherwise that's where I'm starting.</p>
+
+<p>Here's a 90-second look if you haven't seen it: <a href="${assetUrl}">${assetUrl}</a></p>`;
+
+    const bodyText = reply
+      ? `You said ${reply} — I've built the walkthrough around it.
+
+Here's a 90-second look at the shape of it: ${assetUrl}`
+      : `Most agencies your size say the same thing — deals stall somewhere between the proposal going out and the payment landing. If yours is different, reply and I'll adjust. Otherwise that's where I'm starting.
+
+Here's a 90-second look if you haven't seen it: ${assetUrl}`;
 
     return {
       subject: `${firstName} — today at ${time}`,
@@ -138,9 +145,7 @@ David`,
 
 <p>We're on for <strong>${time} today</strong>.</p>
 
-<p>If you haven't looked yet, this shows you the shape of what we'll cover: <a href="${assetUrl}">${assetUrl}</a></p>
-
-${metricLine}
+${bodyHtml}
 
 <p>See you at ${time}.</p>
 
@@ -150,9 +155,7 @@ ${metricLine}
 
 We're on for ${time} today.
 
-If you haven't looked yet, this shows you the shape of what we'll cover: ${assetUrl}
-
-${metricLineText}
+${bodyText}
 
 See you at ${time}.
 
@@ -170,26 +173,33 @@ David`,
     const firstName = demo.name.split(' ')[0];
     const assetUrl = preDemoAssetUrl();
 
-    const metricLine = hasFocusMetric(demo)
-      ? `<p>You told me <strong>${getFocusMetricText(demo)}</strong> was the one you wanted to move — that's exactly where I'll start.</p>`
-      : `<p>Come with your rough monthly proposal count in mind — that's where we'll start.</p>`;
+    const reply = said(demo);
+    const proof = reply
+      ? `One agency on this flow pulled $104K in overdue invoices within 48 hours — not from hiring or extra spend, just from taking control of the part where money usually slips.`
+      : `One agency on this flow pulled $104K in overdue invoices within 48 hours — not from hiring or extra spend, just from taking control of the part where money slips between proposal and payment.`;
 
-    const metricLineText = hasFocusMetric(demo)
-      ? `You told me ${getFocusMetricText(demo)} was the one you wanted to move — that's exactly where I'll start.`
-      : `Come with your rough monthly proposal count in mind — that's where we'll start.`;
+    const followHtml = reply
+      ? `<p>You said <strong>${escapeHtml(reply)}</strong> — that's where we're starting, with your numbers.</p>
+
+<p>If you haven't seen it: <a href="${assetUrl}">${assetUrl}</a></p>`
+      : `<p>If you haven't seen it: <a href="${assetUrl}">${assetUrl}</a></p>`;
+
+    const followText = reply
+      ? `You said ${reply} — that's where we're starting, with your numbers.
+
+If you haven't seen it: ${assetUrl}`
+      : `If you haven't seen it: ${assetUrl}`;
 
     return {
-      subject: `${firstName} — one number before ${time}`,
+      subject: `${firstName} — before ${time}`,
       html: wrapEmailHtmlClean(`
 <p>${firstName},</p>
 
-<p>Before we talk at <strong>${time}</strong>:</p>
+<p>Before <strong>${time}</strong>:</p>
 
-<p>One agency on this flow pulled $104K in overdue invoices within 48 hours — not from hiring or spend, just from taking control of the part of the deal where money usually slips.</p>
+<p>${proof}</p>
 
-<p>If you haven't looked yet, this shows you the shape of it: <a href="${assetUrl}">${assetUrl}</a></p>
-
-${metricLine}
+${followHtml}
 
 <p>See you at ${time}.</p>
 
@@ -197,13 +207,11 @@ ${metricLine}
       `),
       text: `${firstName},
 
-Before we talk at ${time}:
+Before ${time}:
 
-One agency on this flow pulled $104K in overdue invoices within 48 hours — not from hiring or spend, just from taking control of the part of the deal where money usually slips.
+${proof}
 
-If you haven't looked yet, this shows you the shape of it: ${assetUrl}
-
-${metricLineText}
+${followText}
 
 See you at ${time}.
 
@@ -220,13 +228,13 @@ David`,
     const firstName = demo.name.split(' ')[0];
     const rescheduleUrl = getRescheduleUrl();
 
-    const metricLine = hasFocusMetric(demo)
-      ? `<p>We'll start with <strong>${getFocusMetricText(demo)}</strong> — where it's leaking and what closes the gap.</p>`
-      : `<p>We'll look at where your sales motion is leaking and what closes the gap.</p>`;
-
-    const metricLineText = hasFocusMetric(demo)
-      ? `We'll start with ${getFocusMetricText(demo)} — where it's leaking and what closes the gap.`
-      : `We'll look at where your sales motion is leaking and what closes the gap.`;
+    const reply = said(demo);
+    const openHtml = reply
+      ? `<p>You said <strong>${escapeHtml(reply)}</strong> — that's where we're starting.</p>`
+      : `<p>Most agencies lose the deal somewhere between the proposal going out and the money coming in — if yours is different, tell me when you join. Otherwise that's where I'm starting.</p>`;
+    const openText = reply
+      ? `You said ${reply} — that's where we're starting.`
+      : `Most agencies lose the deal somewhere between the proposal going out and the money coming in — if yours is different, tell me when you join. Otherwise that's where I'm starting.`;
 
     return {
       subject: `Starting now — your 7-minute walkthrough`,
@@ -235,14 +243,14 @@ David`,
 
 <p>I'm ready.</p>
 
-${metricLine}
+${openHtml}
 
 <p><a href="${demo.join_url}" class="cta">Join Walkthrough</a></p>
 
 <p>Or copy this link:<br>
 <span class="muted">${demo.join_url}</span></p>
 
-<p>If timing just broke on your side: <a href="${rescheduleUrl}">Reschedule</a></p>
+<p>If timing just broke: <a href="${rescheduleUrl}">Reschedule</a></p>
 
 <p>David</p>
       `),
@@ -250,11 +258,11 @@ ${metricLine}
 
 I'm ready.
 
-${metricLineText}
+${openText}
 
 Join: ${demo.join_url}
 
-If timing just broke on your side: ${rescheduleUrl}
+If timing just broke: ${rescheduleUrl}
 
 David`,
     };
@@ -269,13 +277,14 @@ David`,
     const firstName = demo.name.split(' ')[0];
     const rescheduleUrl = getRescheduleUrl();
 
-    const metricLine = hasFocusMetric(demo)
-      ? `<p>You'd mentioned <strong>${getFocusMetricText(demo)}</strong> was the one you wanted to move — still worth 7 minutes to see how that gets fixed?</p>`
-      : `<p>Still worth 7 minutes to see where your sales motion is leaking and how to fix it?</p>`;
+    const reply = said(demo);
+    const metricLine = reply
+      ? `<p>You said <strong>${escapeHtml(reply)}</strong> — still worth 7 minutes to see how that gets fixed?</p>`
+      : `<p>Still worth 7 minutes to look at where deals stall between the proposal and the payment?</p>`;
 
-    const metricLineText = hasFocusMetric(demo)
-      ? `You'd mentioned ${getFocusMetricText(demo)} was the one you wanted to move — still worth 7 minutes to see how that gets fixed?`
-      : `Still worth 7 minutes to see where your sales motion is leaking and how to fix it?`;
+    const metricLineText = reply
+      ? `You said ${reply} — still worth 7 minutes to see how that gets fixed?`
+      : `Still worth 7 minutes to look at where deals stall between the proposal and the payment?`;
 
     return {
       subject: `Missed you, ${firstName} — want to grab another?`,

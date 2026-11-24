@@ -10,29 +10,33 @@ import { db } from '@/lib/db';
 import { DemoService } from '@/services/demo.service';
 import { resolveStepSchedule } from '@/lib/schedule-compact';
 import type { Demo, DemoType, MessageType, ScheduledJob } from '@/types/demo';
-import { TIMING } from '@/lib/config';
+import { BOOKING_SMS_DELAY_MS, TIMING } from '@/lib/config';
 
 type SequenceStep = {
   messageType: MessageType;
   offset: number;
+  anchor?: 'meeting' | 'ingest';
 };
 
 const SEQUENCES: Record<DemoType, SequenceStep[]> = {
   SAME_DAY: [
-    { messageType: 'CONFIRM_INITIAL', offset: 0 },
+    { messageType: 'CONFIRM_INITIAL', offset: 0, anchor: 'ingest' },
+    { messageType: 'SMS_CONFIRM', offset: BOOKING_SMS_DELAY_MS, anchor: 'ingest' },
     { messageType: 'SMS_REMINDER', offset: -TIMING.SAME_DAY.T_MINUS_30M },
     { messageType: 'JOIN_LINK', offset: -TIMING.SAME_DAY.T_MINUS_10M },
   ],
 
   NEXT_DAY: [
-    { messageType: 'CONFIRM_INITIAL', offset: 0 },
+    { messageType: 'CONFIRM_INITIAL', offset: 0, anchor: 'ingest' },
+    { messageType: 'SMS_CONFIRM', offset: BOOKING_SMS_DELAY_MS, anchor: 'ingest' },
     { messageType: 'CONFIRM_REMINDER', offset: -TIMING.NEXT_DAY.T_MINUS_4H },
     { messageType: 'SMS_REMINDER', offset: -TIMING.NEXT_DAY.T_MINUS_30M },
     { messageType: 'JOIN_LINK', offset: -TIMING.NEXT_DAY.T_MINUS_10M },
   ],
 
   FUTURE: [
-    { messageType: 'CONFIRM_INITIAL', offset: 0 },
+    { messageType: 'CONFIRM_INITIAL', offset: 0, anchor: 'ingest' },
+    { messageType: 'SMS_CONFIRM', offset: BOOKING_SMS_DELAY_MS, anchor: 'ingest' },
     { messageType: 'SMS_DAY_BEFORE', offset: -TIMING.FUTURE.T_MINUS_24H },
     { messageType: 'DAY_OF_REMINDER', offset: -TIMING.FUTURE.T_MINUS_4H },
     { messageType: 'SMS_REMINDER', offset: -TIMING.FUTURE.T_MINUS_30M },
@@ -78,6 +82,7 @@ export class SchedulerService {
         offsetMs: step.offset,
         scheduledAtMs,
         nowMs,
+        anchor: step.anchor,
       });
 
       if (resolved.action === 'skip') {

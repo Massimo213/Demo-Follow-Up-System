@@ -138,6 +138,10 @@ export class DemoService {
     return db.demos.updateFocusMetric(id, focusMetric);
   }
 
+  static async savePainReply(id: string, reply: string): Promise<void> {
+    return db.demos.savePainReply(id, reply);
+  }
+
   static async cancel(calendlyEventId: string): Promise<void> {
     const demo = await this.getByCalendlyEventId(calendlyEventId);
     if (!demo) return;

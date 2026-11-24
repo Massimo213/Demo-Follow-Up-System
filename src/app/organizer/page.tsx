@@ -9,6 +9,7 @@ import type { Demo, PqadVerdict, PipelineStage } from '@/types/demo';
 import { AnalyticsPanel } from './analytics-panel';
 import { isUnresolvedPast } from '@/lib/show-rate';
 import { canOrganizerCorrectAttendance, isLiveMeetingWindow } from '@/lib/phase0-rules';
+import { painReply } from '@/lib/pain-reply';
 
 type Tab = 'booked' | 'pqad' | 'pipeline' | 'rescue' | 'analytics';
 type Period = 'upcoming' | 'past';
@@ -1003,6 +1004,12 @@ export default function OrganizerDashboardPage() {
                                 <div style={{ fontSize: 11, color: '#636366', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {d.email}
                                 </div>
+                                {painReply(d) ? (
+                                  <div style={{ fontSize: 11, color: '#e8e8ea', marginTop: 4, lineHeight: 1.35 }}>
+                                    <span style={{ color: '#636366' }}>They said: </span>
+                                    {painReply(d)}
+                                  </div>
+                                ) : null}
                               </div>
                             </div>
                             {/* Meta row: date + deal size */}
@@ -1236,6 +1243,20 @@ export default function OrganizerDashboardPage() {
                             >
                               {d.email}
                             </div>
+                            {painReply(d) ? (
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: '#e8e8ea',
+                                  marginTop: 6,
+                                  lineHeight: 1.4,
+                                  maxWidth: 280,
+                                }}
+                              >
+                                <span style={{ color: '#636366' }}>They said: </span>
+                                {painReply(d)}
+                              </div>
+                            ) : null}
                           </td>
                           <td style={cell}>
                             <span

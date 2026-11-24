@@ -279,6 +279,37 @@ export const db = {
       return data as Demo;
     },
 
+    /**
+     * Store their exact answer and mark the booking confirmed.
+     * If the column is not migrated yet, still confirm so the reply is not lost as a no-op.
+     */
+    async savePainReply(id: string, reply: string): Promise<void> {
+      const now = new Date().toISOString();
+      const attempt = await table('demos')
+        .update({
+          focus_reply: reply,
+          status: 'CONFIRMED',
+          confirmed_at: now,
+        })
+        .eq('id', id)
+        .in('status', ['PENDING', 'CONFIRMED'])
+        .select('id')
+        .maybeSingle();
+
+      if (!attempt.error) return;
+
+      const missing =
+        /focus_reply/i.test(attempt.error.message || '') || attempt.error.code === 'PGRST204';
+      if (!missing) throw attempt.error;
+
+      console.warn('[DB] focus_reply missing — run sql/migrations/022_focus_reply.sql');
+      const fallback = await table('demos')
+        .update({ status: 'CONFIRMED', confirmed_at: now })
+        .eq('id', id)
+        .in('status', ['PENDING', 'CONFIRMED']);
+      if (fallback.error) throw fallback.error;
+    },
+
     async findForNoShowCheck(): Promise<Demo[]> {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       
